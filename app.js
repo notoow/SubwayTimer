@@ -46,6 +46,9 @@ const displayStationName = document.getElementById('displayStationName');
 const displayDirection = document.getElementById('displayDirection');
 const displayMinutes = document.getElementById('displayMinutes');
 const displaySeconds = document.getElementById('displaySeconds');
+const displayColon = document.getElementById('displayColon');
+const displayArriving = document.getElementById('displayArriving');
+const segmentDisplay = document.querySelector('.segment-display');
 const displayDestination = document.getElementById('displayDestination');
 const displayCongestion = document.getElementById('displayCongestion');
 const nextTrain1 = document.getElementById('nextTrain1');
@@ -132,6 +135,11 @@ function setupEventListeners() {
             currentDirection = tab.dataset.direction;
             directionTabs.forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
+
+            // 방향 변경 시 행선지 선택 초기화
+            targetDestination = null;
+            lastRenderedData = null;
+
             if (currentStation) {
                 fetchArrivalInfo(currentStation);
                 updateCongestion();
@@ -444,11 +452,18 @@ async function fetchArrivalInfo(station) {
 
         // 도착정보 처리
         let arrivals = [];
+        console.log('도착정보 API 결과:', arrivalResult);
         if (arrivalResult.status === 'fulfilled') {
             const data = arrivalResult.value;
+            console.log('도착정보 데이터:', data);
             if (data.realtimeArrivalList && Array.isArray(data.realtimeArrivalList)) {
                 arrivals = data.realtimeArrivalList;
+                console.log('도착 열차 수:', arrivals.length);
+            } else {
+                console.log('realtimeArrivalList 없음. 키:', Object.keys(data));
             }
+        } else {
+            console.error('도착정보 API 실패:', arrivalResult.reason);
         }
 
         // 열차 위치 처리
@@ -467,7 +482,7 @@ async function fetchArrivalInfo(station) {
 
         lastFetchTime = Date.now();
         updateLastUpdateTime();
-        renderArrivals(arrivals, station.line);
+        renderArrivals(arrivals);
         startCountdown();
 
     } catch (error) {
@@ -735,12 +750,27 @@ function formatTime(seconds) {
 }
 
 // 도착 정보 렌더링 (API 응답 처리)
-function renderArrivals(arrivals, selectedLine) {
-    const filtered = arrivals.filter(arrival => {
-        const isMatchingDirection = arrival.updnLine.includes(currentDirection === 'up' ? '상행' : '하행') ||
-                                    arrival.updnLine.includes(currentDirection === 'up' ? '내선' : '외선');
-        return isMatchingDirection;
+function renderArrivals(arrivals) {
+    // 디버깅: 모든 열차의 방향 정보 확인
+    console.log('=== 도착 정보 ===');
+    arrivals.forEach(a => {
+        console.log(`${a.bstatnNm || a.trainLineNm} | 방향: ${a.updnLine} | 도착: ${a.barvlDt}초`);
     });
+
+    const filtered = arrivals.filter(arrival => {
+        const updnLine = arrival.updnLine || '';
+        // 상행: 상행, 내선 / 하행: 하행, 외선
+        const isUp = updnLine.includes('상행') || updnLine.includes('내선');
+        const isDown = updnLine.includes('하행') || updnLine.includes('외선');
+
+        if (currentDirection === 'up') {
+            return isUp;
+        } else {
+            return isDown;
+        }
+    });
+
+    console.log(`필터링 결과: ${filtered.length}개 (${currentDirection})`);
 
     if (filtered.length === 0) {
         showNoData();
@@ -754,12 +784,23 @@ function renderArrivals(arrivals, selectedLine) {
         let seconds = parseInt(arrival.barvlDt) || 0;
         const status = arrival.arvlMsg2 || '';
 
-        // recptnDt로 시간 보정
-        if (arrival.recptnDt) {
+        // recptnDt로 시간 보정 (한국 시간대 고려)
+        if (arrival.recptnDt && seconds > 0) {
             try {
-                const recptnTime = new Date(arrival.recptnDt).getTime();
+                // 서울시 API는 "YYYY-MM-DD HH:mm:ss" 형식의 KST 반환
+                // 명시적으로 한국 시간대로 파싱
+                let recptnStr = arrival.recptnDt;
+                // 공백을 T로 변환하고 한국 시간대 추가
+                if (recptnStr.includes(' ') && !recptnStr.includes('T')) {
+                    recptnStr = recptnStr.replace(' ', 'T') + '+09:00';
+                }
+                const recptnTime = new Date(recptnStr).getTime();
                 const timeDiff = Math.floor((now - recptnTime) / 1000);
-                seconds = Math.max(0, seconds - timeDiff);
+
+                // 유효한 범위 내에서만 보정 (0~300초, 5분 이내)
+                if (timeDiff > 0 && timeDiff < 300) {
+                    seconds = Math.max(0, seconds - timeDiff);
+                }
             } catch (e) {
                 console.warn('recptnDt 파싱 실패:', arrival.recptnDt);
             }
@@ -1147,8 +1188,6 @@ function updateDisplayMode() {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
 
-    displayMinutes.textContent = mins.toString().padStart(2, '0');
-    displaySeconds.textContent = secs.toString().padStart(2, '0');
     displayDestination.textContent = target.destination;
 
     // 상태에 따른 색상
@@ -1156,13 +1195,21 @@ function updateDisplayMode() {
     displaySeconds.className = 'segment-digits';
 
     if (seconds <= 0) {
-        displayMinutes.textContent = '도';
-        displaySeconds.textContent = '착';
-        displayMinutes.classList.add('arriving');
-        displaySeconds.classList.add('arriving');
-    } else if (seconds < 60) {
-        displayMinutes.classList.add('imminent');
-        displaySeconds.classList.add('imminent');
+        // 도착: segment display 숨기고 "도착" 텍스트 표시
+        segmentDisplay.classList.add('hidden');
+        displayArriving.classList.remove('hidden');
+    } else {
+        // 시간 표시: "도착" 숨기고 segment display 표시
+        segmentDisplay.classList.remove('hidden');
+        displayArriving.classList.add('hidden');
+
+        displayMinutes.textContent = mins.toString().padStart(2, '0');
+        displaySeconds.textContent = secs.toString().padStart(2, '0');
+
+        if (seconds < 60) {
+            displayMinutes.classList.add('imminent');
+            displaySeconds.classList.add('imminent');
+        }
     }
 
     // 다음 열차 정보 (선택된 행선지의 다음 열차들)
