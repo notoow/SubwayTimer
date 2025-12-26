@@ -31,6 +31,21 @@ const congestionFill = document.getElementById('congestionFill');
 const congestionText = document.getElementById('congestionText');
 const lastUpdate = document.getElementById('lastUpdate');
 const toast = document.getElementById('toast');
+const displayModeBtn = document.getElementById('displayModeBtn');
+const displayMode = document.getElementById('displayMode');
+const exitDisplayMode = document.getElementById('exitDisplayMode');
+const displayLine = document.getElementById('displayLine');
+const displayStationName = document.getElementById('displayStationName');
+const displayDirection = document.getElementById('displayDirection');
+const displayMinutes = document.getElementById('displayMinutes');
+const displaySeconds = document.getElementById('displaySeconds');
+const displayDestination = document.getElementById('displayDestination');
+const displayCongestion = document.getElementById('displayCongestion');
+const nextTrain1 = document.getElementById('nextTrain1');
+const nextTrain2 = document.getElementById('nextTrain2');
+
+let isDisplayMode = false;
+let displayInterval = null;
 
 // 초기화
 function init() {
@@ -127,6 +142,20 @@ function setupEventListeners() {
 
     // 알림
     notifyBtn.addEventListener('click', toggleNotify);
+
+    // 전광판 모드
+    displayModeBtn.addEventListener('click', enterDisplayMode);
+    exitDisplayMode.addEventListener('click', exitDisplayModeHandler);
+
+    // ESC 키로 전광판 모드 종료
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && isDisplayMode) {
+            exitDisplayModeHandler();
+        }
+    });
+
+    // 전광판 모드에서 클릭하면 전체화면 토글
+    displayMode.addEventListener('dblclick', toggleFullscreen);
 }
 
 // 테마 관련
@@ -667,6 +696,146 @@ function loadApiKey() {
     apiKey = localStorage.getItem('subwayTimer_apiKey') || '';
     if (apiKey) {
         apiKeyInput.placeholder = 'API 키가 저장되어 있습니다';
+    }
+}
+
+// ===== 전광판 모드 =====
+function enterDisplayMode() {
+    if (!currentStation || arrivalData.length === 0) {
+        showToast('먼저 역을 선택해주세요');
+        return;
+    }
+
+    isDisplayMode = true;
+    displayMode.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+
+    // 역 정보 업데이트
+    displayLine.textContent = getLineName(currentStation.line);
+    displayLine.style.backgroundColor = getLineColor(currentStation.line);
+    displayStationName.textContent = currentStation.name + '역';
+    displayDirection.textContent = currentDirection === 'up' ? '상행' : '하행';
+
+    // 전광판 업데이트 시작
+    updateDisplayMode();
+    displayInterval = setInterval(updateDisplayMode, 1000);
+}
+
+function exitDisplayModeHandler() {
+    isDisplayMode = false;
+    displayMode.classList.add('hidden');
+    document.body.style.overflow = '';
+
+    if (displayInterval) {
+        clearInterval(displayInterval);
+        displayInterval = null;
+    }
+
+    // 전체화면 종료
+    if (document.fullscreenElement) {
+        document.exitFullscreen();
+    }
+}
+
+function updateDisplayMode() {
+    if (!isDisplayMode || arrivalData.length === 0) return;
+
+    const first = arrivalData[0];
+    const seconds = first.currentSeconds ?? first.seconds;
+
+    // 메인 타이머 업데이트
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+
+    displayMinutes.textContent = mins.toString().padStart(2, '0');
+    displaySeconds.textContent = secs.toString().padStart(2, '0');
+    displayDestination.textContent = first.destination;
+
+    // 상태에 따른 색상
+    displayMinutes.className = 'segment-digits';
+    displaySeconds.className = 'segment-digits';
+
+    if (seconds <= 0) {
+        displayMinutes.textContent = '도';
+        displaySeconds.textContent = '착';
+        displayMinutes.classList.add('arriving');
+        displaySeconds.classList.add('arriving');
+    } else if (seconds < 60) {
+        displayMinutes.classList.add('imminent');
+        displaySeconds.classList.add('imminent');
+    }
+
+    // 다음 열차 정보
+    if (arrivalData[1]) {
+        const sec1 = arrivalData[1].currentSeconds ?? arrivalData[1].seconds;
+        const m1 = Math.floor(sec1 / 60);
+        const s1 = sec1 % 60;
+        nextTrain1.querySelector('.next-time').textContent =
+            sec1 <= 0 ? '도착' : `${m1.toString().padStart(2, '0')}:${s1.toString().padStart(2, '0')}`;
+    } else {
+        nextTrain1.querySelector('.next-time').textContent = '--:--';
+    }
+
+    if (arrivalData[2]) {
+        const sec2 = arrivalData[2].currentSeconds ?? arrivalData[2].seconds;
+        const m2 = Math.floor(sec2 / 60);
+        const s2 = sec2 % 60;
+        nextTrain2.querySelector('.next-time').textContent =
+            sec2 <= 0 ? '도착' : `${m2.toString().padStart(2, '0')}:${s2.toString().padStart(2, '0')}`;
+    } else {
+        nextTrain2.querySelector('.next-time').textContent = '--:--';
+    }
+
+    // 혼잡도 업데이트
+    updateDisplayCongestion();
+}
+
+function updateDisplayCongestion() {
+    const hour = new Date().getHours();
+    const day = new Date().getDay();
+    const isWeekend = day === 0 || day === 6;
+
+    let level, text;
+
+    if (isWeekend) {
+        if (hour >= 12 && hour <= 18) {
+            level = 'medium';
+            text = '보통';
+        } else {
+            level = 'low';
+            text = '여유';
+        }
+    } else {
+        if ((hour >= 7 && hour <= 9) || (hour >= 18 && hour <= 20)) {
+            level = 'very-high';
+            text = '매우혼잡';
+        } else if ((hour >= 6 && hour < 7) || (hour > 9 && hour <= 10) ||
+                   (hour >= 17 && hour < 18) || (hour > 20 && hour <= 21)) {
+            level = 'high';
+            text = '혼잡';
+        } else if (hour >= 10 && hour <= 17) {
+            level = 'medium';
+            text = '보통';
+        } else {
+            level = 'low';
+            text = '여유';
+        }
+    }
+
+    const dot = displayCongestion.querySelector('.congestion-dot');
+    const label = displayCongestion.querySelector('.congestion-label');
+
+    dot.className = 'congestion-dot ' + level;
+    label.textContent = text;
+}
+
+function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+        displayMode.requestFullscreen().catch(err => {
+            console.log('전체화면 전환 실패:', err);
+        });
+    } else {
+        document.exitFullscreen();
     }
 }
 
