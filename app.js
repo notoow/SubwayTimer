@@ -13,6 +13,7 @@ let notifyThreshold = 60; // 1분 전 알림
 let walkingTimes = {}; // 역별 도보 시간 저장
 let currentWalkingTime = 0; // 현재 선택된 역의 도보 시간 (분)
 let leaveNotified = false; // 출발 알림 발송 여부
+let targetDestination = null; // 알림 대상 행선지 (null이면 가장 빨리 오는 열차)
 
 // Cloudflare Worker URL (API 프록시)
 const WORKER_URL = 'https://subway-timer.antcow0706.workers.dev';
@@ -375,6 +376,10 @@ function selectStation(station) {
     stationInput.value = station.name;
     suggestions.classList.remove('active');
 
+    // 행선지 선택 초기화
+    targetDestination = null;
+    lastRenderedData = null;
+
     // UI 업데이트
     stationName.textContent = station.name + '역';
     lineIndicator.textContent = getLineName(station.line);
@@ -538,13 +543,13 @@ function startCountdown() {
                 })).filter(train => train.currentSeconds > -30)
             })).filter(group => group.trains.length > 0);
 
-            // 알림 체크 (첫 번째 그룹의 첫 번째 열차)
-            if (arrivalData.length > 0 && arrivalData[0].trains.length > 0) {
-                const firstTrain = arrivalData[0].trains[0];
-                const sec = firstTrain.currentSeconds ?? firstTrain.seconds;
-                if (sec <= notifyThreshold && sec > 0 && !notified.has('first')) {
-                    notified.add('first');
-                    sendNotification(`${arrivalData[0].destination} 열차가 약 1분 후 도착합니다`);
+            // 알림 체크 (선택된 행선지 또는 가장 빠른 열차)
+            const target = getTargetTrain();
+            if (target) {
+                const sec = target.train.currentSeconds ?? target.train.seconds;
+                if (sec <= notifyThreshold && sec > 0 && !notified.has(target.destination)) {
+                    notified.add(target.destination);
+                    sendNotification(`${target.destination} 열차가 약 1분 후 도착합니다`);
                 }
             }
         } else {
@@ -554,13 +559,14 @@ function startCountdown() {
                 currentSeconds: Math.max(0, item.seconds - elapsed)
             })).filter(item => item.currentSeconds > -30);
 
-            arrivalData.forEach((item, index) => {
-                const sec = item.currentSeconds ?? item.seconds;
-                if (sec <= notifyThreshold && sec > 0 && !notified.has(index)) {
-                    notified.add(index);
-                    sendNotification(`${item.destination} 열차가 약 1분 후 도착합니다`);
+            if (arrivalData.length > 0) {
+                const first = arrivalData[0];
+                const sec = first.currentSeconds ?? first.seconds;
+                if (sec <= notifyThreshold && sec > 0 && !notified.has('first')) {
+                    notified.add('first');
+                    sendNotification(`${first.destination} 열차가 약 1분 후 도착합니다`);
                 }
-            });
+            }
         }
 
         if (arrivalData.length === 0) {
@@ -603,6 +609,7 @@ function renderArrivalItems() {
         lastRenderedData = currentDataKey;
 
         arrivalList.innerHTML = arrivalData.map((group, gIdx) => {
+            const isSelected = targetDestination === group.destination;
             const trainsHtml = group.trains.map((train, tIdx) => {
                 const seconds = train.currentSeconds ?? train.seconds;
                 const timeInfo = formatTime(seconds);
@@ -625,10 +632,11 @@ function renderArrivalItems() {
             }).join('');
 
             return `
-                <div class="destination-group" style="--line-color: ${lineColor}">
+                <div class="destination-group ${isSelected ? 'selected' : ''}" data-destination="${group.destination}" style="--line-color: ${lineColor}">
                     <div class="destination-header">
                         <span class="destination-indicator" style="background-color: ${lineColor}"></span>
                         <span class="destination-name">${group.destination}</span>
+                        ${isSelected ? '<span class="destination-alert-icon">🔔</span>' : '<span class="destination-select-hint">탭하여 알림 설정</span>'}
                     </div>
                     <div class="trains-list">
                         ${trainsHtml}
@@ -636,6 +644,14 @@ function renderArrivalItems() {
                 </div>
             `;
         }).join('');
+
+        // 행선지 클릭 이벤트 추가
+        arrivalList.querySelectorAll('.destination-group').forEach(group => {
+            group.addEventListener('click', () => {
+                const dest = group.dataset.destination;
+                selectTargetDestination(dest);
+            });
+        });
     } else {
         // 시간만 업데이트
         arrivalData.forEach((group, gIdx) => {
@@ -966,6 +982,60 @@ function loadStationWalkingTime() {
     leaveNotified = false;
 }
 
+// 행선지 선택 (알림 대상)
+function selectTargetDestination(dest) {
+    if (targetDestination === dest) {
+        // 같은 행선지 다시 클릭하면 해제
+        targetDestination = null;
+        showToast('알림 대상이 해제되었습니다. 가장 빠른 열차로 알림');
+    } else {
+        targetDestination = dest;
+        showToast(`${dest} 열차로 알림 설정됨`);
+    }
+
+    // 출발 알림 초기화
+    leaveNotified = false;
+
+    // UI 업데이트를 위해 lastRenderedData 리셋
+    lastRenderedData = null;
+    renderArrivalItems();
+}
+
+// 알림 대상 열차 찾기
+function getTargetTrain() {
+    if (arrivalData.length === 0) return null;
+
+    const isGrouped = arrivalData[0].trains;
+
+    if (isGrouped) {
+        // 특정 행선지가 선택된 경우
+        if (targetDestination) {
+            const targetGroup = arrivalData.find(g => g.destination === targetDestination);
+            if (targetGroup && targetGroup.trains.length > 0) {
+                return {
+                    train: targetGroup.trains[0],
+                    destination: targetGroup.destination
+                };
+            }
+        }
+        // 선택 안 됐거나 해당 행선지가 없으면 가장 빠른 열차
+        if (arrivalData[0].trains.length > 0) {
+            return {
+                train: arrivalData[0].trains[0],
+                destination: arrivalData[0].destination
+            };
+        }
+    } else {
+        // flat 구조
+        return {
+            train: arrivalData[0],
+            destination: arrivalData[0].destination
+        };
+    }
+
+    return null;
+}
+
 // 출발 알림 업데이트
 function updateLeaveAlert() {
     if (!currentStation || arrivalData.length === 0 || currentWalkingTime === 0) {
@@ -974,22 +1044,15 @@ function updateLeaveAlert() {
         return;
     }
 
-    // 그룹 구조/flat 구조 모두 지원
-    const isGrouped = arrivalData[0].trains;
-    let firstTrain, destination;
-
-    if (isGrouped) {
-        if (arrivalData[0].trains.length === 0) {
-            leaveAlert.classList.add('hidden');
-            if (displayLeaveAlert) displayLeaveAlert.classList.add('hidden');
-            return;
-        }
-        firstTrain = arrivalData[0].trains[0];
-        destination = arrivalData[0].destination;
-    } else {
-        firstTrain = arrivalData[0];
-        destination = firstTrain.destination;
+    const target = getTargetTrain();
+    if (!target) {
+        leaveAlert.classList.add('hidden');
+        if (displayLeaveAlert) displayLeaveAlert.classList.add('hidden');
+        return;
     }
+
+    const firstTrain = target.train;
+    const destination = target.destination;
 
     const trainSeconds = firstTrain.currentSeconds ?? firstTrain.seconds;
     const walkingSeconds = currentWalkingTime * 60;
@@ -1074,8 +1137,11 @@ function exitDisplayModeHandler() {
 function updateDisplayMode() {
     if (!isDisplayMode || arrivalData.length === 0) return;
 
-    const first = arrivalData[0];
-    const seconds = first.currentSeconds ?? first.seconds;
+    // 선택된 행선지 또는 가장 빠른 열차
+    const target = getTargetTrain();
+    if (!target) return;
+
+    const seconds = target.train.currentSeconds ?? target.train.seconds;
 
     // 메인 타이머 업데이트
     const mins = Math.floor(seconds / 60);
@@ -1083,7 +1149,7 @@ function updateDisplayMode() {
 
     displayMinutes.textContent = mins.toString().padStart(2, '0');
     displaySeconds.textContent = secs.toString().padStart(2, '0');
-    displayDestination.textContent = first.destination;
+    displayDestination.textContent = target.destination;
 
     // 상태에 따른 색상
     displayMinutes.className = 'segment-digits';
@@ -1099,9 +1165,27 @@ function updateDisplayMode() {
         displaySeconds.classList.add('imminent');
     }
 
-    // 다음 열차 정보
-    if (arrivalData[1]) {
-        const sec1 = arrivalData[1].currentSeconds ?? arrivalData[1].seconds;
+    // 다음 열차 정보 (선택된 행선지의 다음 열차들)
+    const isGrouped = arrivalData[0]?.trains;
+    let nextTrains = [];
+
+    if (isGrouped && targetDestination) {
+        // 선택된 행선지 그룹의 다음 열차들
+        const targetGroup = arrivalData.find(g => g.destination === targetDestination);
+        if (targetGroup && targetGroup.trains.length > 1) {
+            nextTrains = targetGroup.trains.slice(1, 3);
+        }
+    } else if (isGrouped) {
+        // 전체에서 다음 열차들 (다른 행선지 포함)
+        const allTrains = arrivalData.flatMap(g => g.trains.map(t => ({...t, dest: g.destination})));
+        allTrains.sort((a, b) => (a.currentSeconds ?? a.seconds) - (b.currentSeconds ?? b.seconds));
+        nextTrains = allTrains.slice(1, 3);
+    } else {
+        nextTrains = arrivalData.slice(1, 3);
+    }
+
+    if (nextTrains[0]) {
+        const sec1 = nextTrains[0].currentSeconds ?? nextTrains[0].seconds;
         const m1 = Math.floor(sec1 / 60);
         const s1 = sec1 % 60;
         nextTrain1.querySelector('.next-time').textContent =
@@ -1110,8 +1194,8 @@ function updateDisplayMode() {
         nextTrain1.querySelector('.next-time').textContent = '--:--';
     }
 
-    if (arrivalData[2]) {
-        const sec2 = arrivalData[2].currentSeconds ?? arrivalData[2].seconds;
+    if (nextTrains[1]) {
+        const sec2 = nextTrains[1].currentSeconds ?? nextTrains[1].seconds;
         const m2 = Math.floor(sec2 / 60);
         const s2 = sec2 % 60;
         nextTrain2.querySelector('.next-time').textContent =
