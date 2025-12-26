@@ -555,7 +555,7 @@ function startCountdown() {
                 trains: group.trains.map(train => ({
                     ...train,
                     currentSeconds: train.seconds - elapsed
-                })).filter(train => train.currentSeconds > -30)
+                })).filter(train => train.currentSeconds > 0)
             })).filter(group => group.trains.length > 0);
 
             // 알림 체크 (선택된 행선지 또는 가장 빠른 열차)
@@ -572,7 +572,7 @@ function startCountdown() {
             arrivalData = arrivalData.map(item => ({
                 ...item,
                 currentSeconds: item.seconds - elapsed
-            })).filter(item => item.currentSeconds > -30);
+            })).filter(item => item.currentSeconds > 0);
 
             if (arrivalData.length > 0) {
                 const first = arrivalData[0];
