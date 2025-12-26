@@ -2,10 +2,11 @@
 let currentStation = null;
 let currentDirection = 'up';
 let favorites = [];
-let apiKey = '46774f6a4d74616e38394361555279'; // Seoul Open Data API Key (프록시용 백업)
+let apiKey = '585858626a74616e38375961745252'; // Seoul Open Data API Key (실시간 지하철 전용)
 let refreshInterval = null;
 let countdownInterval = null;
 let arrivalData = [];
+let trainPositions = []; // 실시간 열차 위치 데이터
 let lastFetchTime = null;
 let notifyEnabled = false;
 let notifyThreshold = 60; // 1분 전 알림
@@ -402,103 +403,59 @@ function selectStation(station) {
     }, 30000);
 }
 
-// 도착 정보 가져오기
+// API 호출 헬퍼 함수
+async function fetchFromProxy(url) {
+    const response = await fetch(url, {
+        headers: { 'Accept': 'application/json' }
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const text = await response.text();
+    if (!text || text.trim() === '') throw new Error('빈 응답');
+    return JSON.parse(text);
+}
+
+// 도착 정보 가져오기 (도착정보 + 열차위치 API 병렬 호출)
 async function fetchArrivalInfo(station) {
-    // API 키가 없으면 데모 모드
     if (!apiKey) {
         showDemoMode(station);
         return;
     }
 
-    // 첫 로딩 시에만 로딩 표시 (깜빡거림 방지)
     if (arrivalData.length === 0) {
         showLoading();
     }
 
     try {
-        // 여러 프록시 시도 (안정성 향상)
         const stationName = encodeURIComponent(station.name);
-        const apiUrl = `http://swopenapi.seoul.go.kr/api/subway/${apiKey}/json/realtimeStationArrival/0/10/${stationName}`;
+        const lineName = encodeURIComponent(station.line + '호선');
 
-        let data = null;
-        let lastError = null;
+        // 병렬로 두 API 호출
+        const [arrivalResult, positionResult] = await Promise.allSettled([
+            // 1. 실시간 도착정보
+            fetchFromProxy(`${workerUrl}?station=${stationName}`),
+            // 2. 실시간 열차 위치
+            fetchFromProxy(`${workerUrl}?type=position&line=${lineName}`)
+        ]);
 
-        // 프록시 목록 (순서대로 시도)
-        const proxyUrls = [];
-
-        // Cloudflare Worker가 설정되어 있으면 최우선 사용
-        if (workerUrl) {
-            proxyUrls.push(`${workerUrl}?station=${stationName}`);
-        }
-
-        // 백업 프록시들
-        proxyUrls.push(
-            `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`,
-            `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`
-        );
-
-        for (const url of proxyUrls) {
-            try {
-                const response = await fetch(url, {
-                    timeout: 8000,
-                    headers: { 'Accept': 'application/json' }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-
-                const text = await response.text();
-
-                // 빈 응답 체크
-                if (!text || text.trim() === '') {
-                    throw new Error('빈 응답');
-                }
-
-                // JSON 파싱 시도
-                try {
-                    data = JSON.parse(text);
-                } catch (parseError) {
-                    console.warn('JSON 파싱 실패:', text.substring(0, 200));
-                    throw new Error('JSON 파싱 실패');
-                }
-
-                // 성공하면 루프 종료
-                break;
-            } catch (proxyError) {
-                lastError = proxyError;
-                console.warn('프록시 실패:', url.substring(0, 50), proxyError.message);
-                continue;
+        // 도착정보 처리
+        let arrivals = [];
+        if (arrivalResult.status === 'fulfilled') {
+            const data = arrivalResult.value;
+            if (data.realtimeArrivalList && Array.isArray(data.realtimeArrivalList)) {
+                arrivals = data.realtimeArrivalList;
             }
         }
 
-        // 모든 프록시 실패
-        if (!data) {
-            throw lastError || new Error('모든 프록시 실패');
-        }
-
-        // API 응답 구조 확인 및 에러 처리
-        if (data.status === 500 || data.code === 'INFO-200') {
-            showNoData();
-            return;
-        }
-
-        // errorMessage가 있어도 INFO-000은 성공
-        if (data.errorMessage && data.errorMessage.code !== 'INFO-000') {
-            if (data.errorMessage.code === 'INFO-200') {
-                showNoData();
-            } else {
-                console.error('API 에러:', data.errorMessage);
-                showError(data.errorMessage.message || '데이터를 가져올 수 없습니다');
+        // 열차 위치 처리
+        if (positionResult.status === 'fulfilled') {
+            const posData = positionResult.value;
+            if (posData.realtimePositionList && Array.isArray(posData.realtimePositionList)) {
+                trainPositions = posData.realtimePositionList;
+                console.log('열차 위치:', trainPositions.length + '대 운행 중');
             }
-            return;
         }
 
-        // realtimeArrivalList 확인
-        const arrivals = data.realtimeArrivalList;
-
-        if (!arrivals || !Array.isArray(arrivals) || arrivals.length === 0) {
-            console.log('도착 데이터 없음:', data);
+        if (arrivals.length === 0) {
             showNoData();
             return;
         }
@@ -510,7 +467,6 @@ async function fetchArrivalInfo(station) {
 
     } catch (error) {
         console.error('API 호출 실패:', error);
-        // API 실패 시 데모 모드로 전환
         showDemoMode(station);
     }
 }

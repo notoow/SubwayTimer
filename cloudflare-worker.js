@@ -1,10 +1,12 @@
 /**
  * Cloudflare Worker - Seoul Subway API Proxy
+ * 지원 API:
+ * - realtimeStationArrival: 역별 실시간 도착정보
+ * - realtimePosition: 호선별 실시간 열차 위치
  */
 
 export default {
     async fetch(request, env, ctx) {
-        // CORS 헤더
         const corsHeaders = {
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'GET, OPTIONS',
@@ -12,37 +14,41 @@ export default {
             'Content-Type': 'application/json; charset=utf-8'
         };
 
-        // OPTIONS 요청 처리 (CORS preflight)
         if (request.method === 'OPTIONS') {
             return new Response(null, { headers: corsHeaders });
         }
 
-        // URL 파싱
         const url = new URL(request.url);
+        const type = url.searchParams.get('type') || 'arrival'; // arrival | position
         const station = url.searchParams.get('station');
+        const line = url.searchParams.get('line');
 
-        if (!station) {
-            return new Response(
-                JSON.stringify({ error: 'station 파라미터가 필요합니다' }),
-                { status: 400, headers: corsHeaders }
-            );
-        }
-
-        // API 키 확인 (환경변수 또는 하드코딩된 백업)
-        const apiKey = env.SEOUL_API_KEY || '46774f6a4d74616e38394361555279';
+        // API 키 (환경변수 또는 백업)
+        const apiKey = env.SEOUL_API_KEY || '585858626a74616e38375961745252';
 
         try {
-            // 서울시 API 호출 (station은 이미 인코딩된 상태로 들어옴)
-            const decodedStation = decodeURIComponent(station);
-            const apiUrl = `http://swopenapi.seoul.go.kr/api/subway/${apiKey}/json/realtimeStationArrival/0/10/${encodeURIComponent(decodedStation)}`;
+            let apiUrl;
+
+            if (type === 'position' && line) {
+                // 실시간 열차 위치 API (호선별)
+                const lineName = decodeURIComponent(line);
+                apiUrl = `http://swopenapi.seoul.go.kr/api/subway/${apiKey}/json/realtimePosition/0/100/${encodeURIComponent(lineName)}`;
+            } else if (station) {
+                // 실시간 도착정보 API (역별)
+                const decodedStation = decodeURIComponent(station);
+                apiUrl = `http://swopenapi.seoul.go.kr/api/subway/${apiKey}/json/realtimeStationArrival/0/20/${encodeURIComponent(decodedStation)}`;
+            } else {
+                return new Response(
+                    JSON.stringify({ error: 'station 또는 line 파라미터가 필요합니다' }),
+                    { status: 400, headers: corsHeaders }
+                );
+            }
 
             const response = await fetch(apiUrl, {
                 headers: { 'Accept': 'application/json' }
             });
 
             const text = await response.text();
-
-            // 응답 전달
             return new Response(text, { headers: corsHeaders });
 
         } catch (error) {
