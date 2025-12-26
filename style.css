@@ -357,6 +357,101 @@ body {
 .congestion-text.high { color: #EF4444; }
 .congestion-text.very-high { color: #DC2626; }
 
+/* 도보 시간 설정 */
+.walking-time-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.walking-time-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.walking-time-left svg {
+    color: var(--accent);
+}
+
+.walking-time-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.walking-time-btn {
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 18px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.walking-time-btn:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
+
+.walking-time-btn:active {
+    transform: scale(0.95);
+}
+
+.walking-time-value {
+    font-size: 18px;
+    font-weight: 700;
+    min-width: 24px;
+    text-align: center;
+    color: var(--accent);
+}
+
+.walking-time-unit {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+/* 출발 알림 */
+.leave-alert {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    font-weight: 600;
+    font-size: 15px;
+    animation: leave-pulse 1s ease-in-out infinite;
+}
+
+.leave-alert.hidden {
+    display: none;
+}
+
+.leave-alert.warning {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    animation: none;
+}
+
+@keyframes leave-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
 /* 방향 탭 */
 .direction-tabs {
     display: flex;
@@ -435,6 +530,27 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.train-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.train-badge.express {
+    background: #ef4444;
+    color: white;
+}
+
+.train-badge.last {
+    background: #6366f1;
+    color: white;
 }
 
 .arrival-status {
@@ -1052,5 +1168,68 @@ body {
 
     .display-destination {
         font-size: 36px;
+    }
+}
+
+/* 전광판 모드 출발 알림 */
+.display-leave-alert {
+    position: absolute;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 32px;
+    background: rgba(239, 68, 68, 0.9);
+    border-radius: 40px;
+    border: 2px solid #ef4444;
+    animation: display-leave-pulse 1s ease-in-out infinite;
+}
+
+.display-leave-alert.hidden {
+    display: none;
+}
+
+.display-leave-alert.warning {
+    background: rgba(245, 158, 11, 0.9);
+    border-color: #f59e0b;
+    animation: none;
+}
+
+.display-leave-alert .leave-icon {
+    font-size: 28px;
+}
+
+.display-leave-alert .leave-text {
+    font-family: 'DSEG', 'Courier New', monospace;
+    font-size: 32px;
+    color: #fff;
+    text-shadow: 0 0 10px rgba(255,255,255,0.5);
+}
+
+@keyframes display-leave-pulse {
+    0%, 100% {
+        transform: translateX(-50%) scale(1);
+        box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+    }
+    50% {
+        transform: translateX(-50%) scale(1.02);
+        box-shadow: 0 0 40px rgba(239, 68, 68, 0.8);
+    }
+}
+
+@media (max-width: 600px) {
+    .display-leave-alert {
+        bottom: 60px;
+        padding: 12px 24px;
+    }
+
+    .display-leave-alert .leave-icon {
+        font-size: 20px;
+    }
+
+    .display-leave-alert .leave-text {
+        font-size: 24px;
     }
 }
