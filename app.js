@@ -709,21 +709,32 @@ function renderArrivals(arrivals, selectedLine) {
     arrivalData = filtered.slice(0, 3).map(arrival => {
         // barvlDt: 열차 도착 예정 시간 (초)
         let seconds = parseInt(arrival.barvlDt) || 0;
+        const status = arrival.arvlMsg2 || '';
 
-        // 디버깅용 로그
-        console.log('열차 정보:', {
-            destination: arrival.trainLineNm,
-            barvlDt: arrival.barvlDt,
-            seconds,
-            status: arrival.arvlMsg2
-        });
+        // barvlDt가 0이면 상태 메시지에서 역 수 추출하여 시간 추정
+        if (seconds === 0 && status) {
+            // "[N]번째 전역" 패턴에서 역 수 추출
+            const stationMatch = status.match(/\[(\d+)\]번째 전역/);
+            if (stationMatch) {
+                const stationsAway = parseInt(stationMatch[1]);
+                // 역당 약 2분 (120초) 추정
+                seconds = stationsAway * 120;
+            } else if (status.includes('진입') || status.includes('도착')) {
+                seconds = 30;
+            } else if (status.includes('출발')) {
+                seconds = 60;
+            } else if (status.includes('전역')) {
+                // "전역 출발" 등
+                seconds = 90;
+            }
+        }
 
         return {
             seconds,
             destination: arrival.trainLineNm || (arrival.bstatnNm + '행'),
-            status: arrival.arvlMsg2 || '',
-            trainType: arrival.btrainSttus || '일반', // 급행/일반
-            isLast: arrival.lstcarAt === '1' // 막차 여부
+            status: status,
+            trainType: arrival.btrainSttus || '일반',
+            isLast: arrival.lstcarAt === '1'
         };
     });
 
