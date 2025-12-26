@@ -1,4 +1,4 @@
-const CACHE_NAME = 'subway-timer-v1';
+const CACHE_NAME = 'subway-timer-v2';
 const urlsToCache = [
   '/SubwayTimer/',
   '/SubwayTimer/index.html',
@@ -33,20 +33,29 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// 요청 가로채기
+// 요청 가로채기 (네트워크 우선, 실패시 캐시)
 self.addEventListener('fetch', event => {
   // API 요청은 캐시하지 않음
-  if (event.request.url.includes('swopenapi.seoul.go.kr')) {
+  if (event.request.url.includes('swopenapi.seoul.go.kr') ||
+      event.request.url.includes('corsproxy.io')) {
     return;
   }
 
   event.respondWith(
-    caches.match(event.request)
+    fetch(event.request)
       .then(response => {
-        if (response) {
-          return response;
+        // 성공하면 캐시 업데이트
+        if (response.status === 200) {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseClone);
+          });
         }
-        return fetch(event.request);
+        return response;
+      })
+      .catch(() => {
+        // 네트워크 실패시 캐시에서 반환
+        return caches.match(event.request);
       })
   );
 });
