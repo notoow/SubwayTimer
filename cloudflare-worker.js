@@ -19,24 +19,25 @@ export default {
         }
 
         const url = new URL(request.url);
-        const type = url.searchParams.get('type') || 'arrival'; // arrival | position
+        const type = url.searchParams.get('type') || 'arrival';
         const station = url.searchParams.get('station');
         const line = url.searchParams.get('line');
 
-        // API 키 (환경변수 또는 백업)
-        const apiKey = env.SEOUL_API_KEY || '585858626a74616e38375961745252';
+        // API 키 (각 API별로 다른 키 사용)
+        const arrivalKey = env.SEOUL_API_KEY || '46774f6a4d74616e38394361555279';
+        const positionKey = env.SEOUL_POSITION_KEY || '585858626a74616e38375961745252';
 
         try {
             let apiUrl;
 
             if (type === 'position' && line) {
-                // 실시간 열차 위치 API (호선별)
+                // 실시간 열차 위치 API (호선별) - 전용 키 사용
                 const lineName = decodeURIComponent(line);
-                apiUrl = `http://swopenapi.seoul.go.kr/api/subway/${apiKey}/json/realtimePosition/0/100/${encodeURIComponent(lineName)}`;
+                apiUrl = `http://swopenapi.seoul.go.kr/api/subway/${positionKey}/json/realtimePosition/0/100/${encodeURIComponent(lineName)}`;
             } else if (station) {
                 // 실시간 도착정보 API (역별)
                 const decodedStation = decodeURIComponent(station);
-                apiUrl = `http://swopenapi.seoul.go.kr/api/subway/${apiKey}/json/realtimeStationArrival/0/20/${encodeURIComponent(decodedStation)}`;
+                apiUrl = `http://swopenapi.seoul.go.kr/api/subway/${arrivalKey}/json/realtimeStationArrival/0/20/${encodeURIComponent(decodedStation)}`;
             } else {
                 return new Response(
                     JSON.stringify({ error: 'station 또는 line 파라미터가 필요합니다' }),
