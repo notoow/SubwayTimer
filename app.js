@@ -749,15 +749,36 @@ function formatTime(seconds) {
     };
 }
 
+// 호선 코드 → subwayId 매핑
+const lineToSubwayId = {
+    '1': '1001', '2': '1002', '3': '1003', '4': '1004', '5': '1005',
+    '6': '1006', '7': '1007', '8': '1008', '9': '1009',
+    'K': '1063', // 경의중앙선
+    'A': '1065', // 공항철도
+    'G': '1067', // 경춘선
+    'I': '1075', // 수인분당선
+    'S': '1077', // 신분당선
+    'U': '1092', // 우이신설선
+    'E': '1032', // GTX-A (수서~동탄)
+};
+
 // 도착 정보 렌더링 (API 응답 처리)
 function renderArrivals(arrivals) {
     // 디버깅: 모든 열차의 방향 정보 확인
     console.log('=== 도착 정보 ===');
     arrivals.forEach(a => {
-        console.log(`${a.bstatnNm || a.trainLineNm} | 방향: ${a.updnLine} | 도착: ${a.barvlDt}초`);
+        console.log(`${a.bstatnNm || a.trainLineNm} | 방향: ${a.updnLine} | 호선: ${a.subwayId} | 도착: ${a.barvlDt}초`);
     });
 
+    // 선택한 호선의 subwayId
+    const targetSubwayId = currentStation ? lineToSubwayId[currentStation.line] : null;
+
     const filtered = arrivals.filter(arrival => {
+        // 호선 필터링 (선택한 호선만)
+        if (targetSubwayId && arrival.subwayId !== targetSubwayId) {
+            return false;
+        }
+
         const updnLine = arrival.updnLine || '';
         // 상행: 상행, 내선 / 하행: 하행, 외선
         const isUp = updnLine.includes('상행') || updnLine.includes('내선');
