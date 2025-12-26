@@ -1,0 +1,7 @@
+name = "subway-api"
+main = "cloudflare-worker.js"
+compatibility_date = "2024-01-01"
+
+# 환경변수는 Cloudflare Dashboard에서 설정하거나
+# .dev.vars 파일에 로컬용으로 설정 (git에 올리지 않음)
+# SEOUL_API_KEY = "your-api-key-here"
