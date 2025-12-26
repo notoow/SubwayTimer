@@ -483,7 +483,8 @@ async function fetchArrivalInfo(station) {
             return;
         }
 
-        if (data.errorMessage) {
+        // errorMessage가 있어도 INFO-000은 성공
+        if (data.errorMessage && data.errorMessage.code !== 'INFO-000') {
             if (data.errorMessage.code === 'INFO-200') {
                 showNoData();
             } else {
