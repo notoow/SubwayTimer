@@ -690,6 +690,42 @@ body {
     color: white;
 }
 
+/* 선택된 행선지 (알림 대상) */
+.destination-group.selected {
+    border: 2px solid var(--accent);
+    box-shadow: 0 0 8px rgba(0, 168, 77, 0.3);
+}
+
+.destination-group.selected .destination-header {
+    background: rgba(0, 168, 77, 0.15);
+}
+
+.destination-alert-icon {
+    margin-left: auto;
+    font-size: 16px;
+}
+
+.destination-select-hint {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--text-muted);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.destination-group:hover .destination-select-hint {
+    opacity: 1;
+}
+
+.destination-group {
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.destination-group:hover:not(.selected) {
+    border: 1px solid var(--text-muted);
+}
+
 /* 업데이트 정보 */
 .update-info {
     padding: 8px 16px;
@@ -1059,8 +1095,8 @@ body {
     font-size: 140px;
     font-weight: bold;
     color: #ff6b35;
-    text-shadow: 0 0 30px rgba(255, 107, 53, 0.5),
-                 0 0 60px rgba(255, 107, 53, 0.3);
+    text-shadow: 0 0 10px rgba(255, 107, 53, 0.6),
+                 0 0 20px rgba(255, 107, 53, 0.3);
     letter-spacing: 8px;
     position: relative;
 }
@@ -1079,7 +1115,7 @@ body {
     font-size: 120px;
     font-weight: bold;
     color: #ff6b35;
-    text-shadow: 0 0 30px rgba(255, 107, 53, 0.5);
+    text-shadow: 0 0 10px rgba(255, 107, 53, 0.5);
     animation: blink 1s step-end infinite;
 }
 
@@ -1123,7 +1159,7 @@ body {
     font-family: 'DSEG', 'Courier New', monospace;
     font-size: 32px;
     color: #4ade80;
-    text-shadow: 0 0 15px rgba(74, 222, 128, 0.4);
+    text-shadow: 0 0 8px rgba(74, 222, 128, 0.4);
 }
 
 /* 혼잡도 표시 */
@@ -1170,20 +1206,20 @@ body {
 /* 임박 상태 */
 .segment-digits.imminent {
     color: #ef4444;
-    text-shadow: 0 0 30px rgba(239, 68, 68, 0.6),
-                 0 0 60px rgba(239, 68, 68, 0.4);
+    text-shadow: 0 0 10px rgba(239, 68, 68, 0.6),
+                 0 0 20px rgba(239, 68, 68, 0.3);
     animation: glow-red 0.5s ease-in-out infinite alternate;
 }
 
 @keyframes glow-red {
-    from { text-shadow: 0 0 30px rgba(239, 68, 68, 0.6); }
-    to { text-shadow: 0 0 50px rgba(239, 68, 68, 0.9); }
+    from { text-shadow: 0 0 10px rgba(239, 68, 68, 0.6); }
+    to { text-shadow: 0 0 18px rgba(239, 68, 68, 0.8); }
 }
 
 .segment-digits.arriving {
     color: #22c55e;
-    text-shadow: 0 0 30px rgba(34, 197, 94, 0.6),
-                 0 0 60px rgba(34, 197, 94, 0.4);
+    text-shadow: 0 0 10px rgba(34, 197, 94, 0.6),
+                 0 0 20px rgba(34, 197, 94, 0.3);
 }
 
 /* 반응형 */
