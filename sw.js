@@ -1,10 +1,10 @@
-const CACHE_NAME = 'subway-timer-v13';
+const CACHE_NAME = 'subway-timer-v14';
 const urlsToCache = [
   '/SubwayTimer/',
   '/SubwayTimer/index.html',
   '/SubwayTimer/style.css',
-  '/SubwayTimer/app.js',
-  '/SubwayTimer/stations.js',
+  '/SubwayTimer/app.js?v=14',
+  '/SubwayTimer/stations.js?v=14',
   '/SubwayTimer/manifest.json'
 ];
 
@@ -44,9 +44,9 @@ self.addEventListener('fetch', event => {
 
   // API 요청은 캐시하지 않음
   if (url.includes('swopenapi.seoul.go.kr') ||
-      url.includes('corsproxy.io') ||
-      url.includes('allorigins.win') ||
-      url.includes('workers.dev')) {
+    url.includes('corsproxy.io') ||
+    url.includes('allorigins.win') ||
+    url.includes('workers.dev')) {
     return;
   }
 

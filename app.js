@@ -316,7 +316,7 @@ function updateCongestion() {
             level = 'very-high';
             text = '매우혼잡';
         } else if ((hour >= 6 && hour < 7) || (hour > 9 && hour <= 10) ||
-                   (hour >= 17 && hour < 18) || (hour > 20 && hour <= 21)) {
+            (hour >= 17 && hour < 18) || (hour > 20 && hour <= 21)) {
             level = 'high';
             text = '혼잡';
         } else if (hour >= 10 && hour <= 17) {
@@ -554,7 +554,7 @@ function startCountdown() {
                 ...group,
                 trains: group.trains.map(train => ({
                     ...train,
-                    currentSeconds: Math.max(0, train.seconds - elapsed)
+                    currentSeconds: train.seconds - elapsed
                 })).filter(train => train.currentSeconds > -30)
             })).filter(group => group.trains.length > 0);
 
@@ -571,7 +571,7 @@ function startCountdown() {
             // 기존 flat 구조
             arrivalData = arrivalData.map(item => ({
                 ...item,
-                currentSeconds: Math.max(0, item.seconds - elapsed)
+                currentSeconds: item.seconds - elapsed
             })).filter(item => item.currentSeconds > -30);
 
             if (arrivalData.length > 0) {
@@ -841,6 +841,7 @@ function renderArrivals(arrivals) {
             const match = arrival.trainLineNm.match(/^(.+?)행/);
             destination = match ? match[1] : arrival.trainLineNm;
         }
+        destination = destination.trim();
 
         return {
             seconds,
@@ -1252,7 +1253,7 @@ function updateDisplayMode() {
         }
     } else if (isGrouped) {
         // 전체에서 다음 열차들 (다른 행선지 포함)
-        const allTrains = arrivalData.flatMap(g => g.trains.map(t => ({...t, dest: g.destination})));
+        const allTrains = arrivalData.flatMap(g => g.trains.map(t => ({ ...t, dest: g.destination })));
         allTrains.sort((a, b) => (a.currentSeconds ?? a.seconds) - (b.currentSeconds ?? b.seconds));
         nextTrains = allTrains.slice(1, 3);
     } else {
@@ -1306,7 +1307,7 @@ function updateDisplayCongestion() {
             level = 'very-high';
             text = '매우혼잡';
         } else if ((hour >= 6 && hour < 7) || (hour > 9 && hour <= 10) ||
-                   (hour >= 17 && hour < 18) || (hour > 20 && hour <= 21)) {
+            (hour >= 17 && hour < 18) || (hour > 20 && hour <= 21)) {
             level = 'high';
             text = '혼잡';
         } else if (hour >= 10 && hour <= 17) {
