@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>지하철 타이머</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>지하철 도착 정보</h1>
+            <p class="subtitle">Seoul Metro Arrival Info</p>
+        </header>
+
+        <div class="search-section">
+            <div class="search-box">
+                <input
+                    type="text"
+                    id="stationInput"
+                    placeholder="역 이름을 입력하세요 (예: 강남)"
+                    autocomplete="off"
+                >
+                <button id="searchBtn" class="search-btn">검색</button>
+            </div>
+            <div id="suggestions" class="suggestions"></div>
+        </div>
+
+        <div id="stationInfo" class="station-info hidden">
+            <div class="station-header">
+                <div class="station-name-wrap">
+                    <span id="lineIndicator" class="line-indicator"></span>
+                    <h2 id="stationName" class="station-name"></h2>
+                </div>
+                <button id="favoriteBtn" class="favorite-btn" title="즐겨찾기">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="direction-tabs">
+                <button class="direction-tab active" data-direction="up">상행</button>
+                <button class="direction-tab" data-direction="down">하행</button>
+            </div>
+
+            <div id="arrivalList" class="arrival-list">
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <span>도착 정보를 불러오는 중...</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="favorites" class="favorites-section">
+            <h3 class="favorites-title">즐겨찾기</h3>
+            <div id="favoritesList" class="favorites-list"></div>
+        </div>
+
+        <div id="apiKeySection" class="api-key-section">
+            <details>
+                <summary>API 키 설정</summary>
+                <div class="api-key-content">
+                    <p>서울시 열린데이터광장에서 API 키를 발급받으세요</p>
+                    <a href="https://data.seoul.go.kr/dataList/OA-12764/F/1/datasetView.do" target="_blank" rel="noopener">
+                        API 키 발급받기 →
+                    </a>
+                    <div class="api-input-wrap">
+                        <input type="text" id="apiKeyInput" placeholder="API 키 입력">
+                        <button id="saveApiKey" class="save-api-btn">저장</button>
+                    </div>
+                </div>
+            </details>
+        </div>
+    </div>
+
+    <script src="stations.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
