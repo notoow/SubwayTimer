@@ -1,4 +1,4 @@
-const CACHE_NAME = 'subway-timer-v2';
+const CACHE_NAME = 'subway-timer-v3';
 const urlsToCache = [
   '/SubwayTimer/',
   '/SubwayTimer/index.html',
@@ -37,7 +37,8 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   // API 요청은 캐시하지 않음
   if (event.request.url.includes('swopenapi.seoul.go.kr') ||
-      event.request.url.includes('corsproxy.io')) {
+      event.request.url.includes('corsproxy.io') ||
+      event.request.url.includes('allorigins.win')) {
     return;
   }
 

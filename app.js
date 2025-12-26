@@ -2,7 +2,7 @@
 let currentStation = null;
 let currentDirection = 'up';
 let favorites = [];
-let apiKey = '46774f6a4d74616e38394361555279'; // Seoul Open Data API Key
+let apiKey = '46774f6a4d74616e38394361555279'; // Seoul Open Data API Key (프록시용 백업)
 let refreshInterval = null;
 let countdownInterval = null;
 let arrivalData = [];
@@ -12,6 +12,10 @@ let notifyThreshold = 60; // 1분 전 알림
 let walkingTimes = {}; // 역별 도보 시간 저장
 let currentWalkingTime = 0; // 현재 선택된 역의 도보 시간 (분)
 let leaveNotified = false; // 출발 알림 발송 여부
+
+// Cloudflare Worker URL (선택사항 - 배포 후 이 값을 설정하면 더 안정적)
+// 예: 'https://subway-api.your-account.workers.dev'
+let workerUrl = localStorage.getItem('subwayTimer_workerUrl') || '';
 
 // DOM 요소
 const stationInput = document.getElementById('stationInput');
@@ -406,16 +410,74 @@ async function fetchArrivalInfo(station) {
         return;
     }
 
-    showLoading();
+    // 첫 로딩 시에만 로딩 표시 (깜빡거림 방지)
+    if (arrivalData.length === 0) {
+        showLoading();
+    }
 
     try {
-        // CORS 프록시 사용 (GitHub Pages에서 직접 호출 불가)
-        const apiUrl = `http://swopenapi.seoul.go.kr/api/subway/${apiKey}/json/realtimeStationArrival/0/10/${encodeURIComponent(station.name)}`;
-        const url = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
+        // 여러 프록시 시도 (안정성 향상)
+        const stationName = encodeURIComponent(station.name);
+        const apiUrl = `http://swopenapi.seoul.go.kr/api/subway/${apiKey}/json/realtimeStationArrival/0/10/${stationName}`;
 
-        const response = await fetch(url);
-        const data = await response.json();
+        let data = null;
+        let lastError = null;
 
+        // 프록시 목록 (순서대로 시도)
+        const proxyUrls = [];
+
+        // Cloudflare Worker가 설정되어 있으면 최우선 사용
+        if (workerUrl) {
+            proxyUrls.push(`${workerUrl}?station=${stationName}`);
+        }
+
+        // 백업 프록시들
+        proxyUrls.push(
+            `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`,
+            `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`
+        );
+
+        for (const url of proxyUrls) {
+            try {
+                const response = await fetch(url, {
+                    timeout: 8000,
+                    headers: { 'Accept': 'application/json' }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const text = await response.text();
+
+                // 빈 응답 체크
+                if (!text || text.trim() === '') {
+                    throw new Error('빈 응답');
+                }
+
+                // JSON 파싱 시도
+                try {
+                    data = JSON.parse(text);
+                } catch (parseError) {
+                    console.warn('JSON 파싱 실패:', text.substring(0, 200));
+                    throw new Error('JSON 파싱 실패');
+                }
+
+                // 성공하면 루프 종료
+                break;
+            } catch (proxyError) {
+                lastError = proxyError;
+                console.warn('프록시 실패:', url.substring(0, 50), proxyError.message);
+                continue;
+            }
+        }
+
+        // 모든 프록시 실패
+        if (!data) {
+            throw lastError || new Error('모든 프록시 실패');
+        }
+
+        // API 응답 구조 확인 및 에러 처리
         if (data.status === 500 || data.code === 'INFO-200') {
             showNoData();
             return;
@@ -425,12 +487,21 @@ async function fetchArrivalInfo(station) {
             if (data.errorMessage.code === 'INFO-200') {
                 showNoData();
             } else {
+                console.error('API 에러:', data.errorMessage);
                 showError(data.errorMessage.message || '데이터를 가져올 수 없습니다');
             }
             return;
         }
 
-        const arrivals = data.realtimeArrivalList || [];
+        // realtimeArrivalList 확인
+        const arrivals = data.realtimeArrivalList;
+
+        if (!arrivals || !Array.isArray(arrivals) || arrivals.length === 0) {
+            console.log('도착 데이터 없음:', data);
+            showNoData();
+            return;
+        }
+
         lastFetchTime = Date.now();
         updateLastUpdateTime();
         renderArrivals(arrivals, station.line);
@@ -438,6 +509,7 @@ async function fetchArrivalInfo(station) {
 
     } catch (error) {
         console.error('API 호출 실패:', error);
+        // API 실패 시 데모 모드로 전환
         showDemoMode(station);
     }
 }
@@ -524,36 +596,66 @@ function startCountdown() {
     }, 1000);
 }
 
-// 도착 정보 항목 렌더링
+// 렌더링 상태 추적 (깜빡거림 방지)
+let lastRenderedData = null;
+
+// 도착 정보 항목 렌더링 (최적화)
 function renderArrivalItems() {
     const lineColor = currentStation ? getLineColor(currentStation.line) : '#00A84D';
+    const items = arrivalData.slice(0, 3);
 
-    arrivalList.innerHTML = arrivalData.slice(0, 3).map((item, index) => {
-        const seconds = item.currentSeconds ?? item.seconds;
-        const timeInfo = formatTime(seconds);
+    // 데이터 구조가 변경되었는지 확인 (행선지, 상태 등)
+    const currentDataKey = items.map(i => `${i.destination}_${i.trainType}_${i.isLast}`).join('|');
+    const needsFullRender = lastRenderedData !== currentDataKey;
 
-        // 급행/막차 뱃지
-        let badges = '';
-        if (item.trainType === '급행' || item.trainType === 'ITX') {
-            badges += `<span class="train-badge express">${item.trainType}</span>`;
-        }
-        if (item.isLast) {
-            badges += `<span class="train-badge last">막차</span>`;
-        }
+    if (needsFullRender) {
+        // 전체 다시 렌더링 (데이터 구조 변경 시)
+        lastRenderedData = currentDataKey;
 
-        return `
-            <div class="arrival-item ${timeInfo.className}" style="--line-color: ${lineColor}">
-                <span class="arrival-order" style="background-color: ${lineColor}">${index + 1}</span>
-                <div class="arrival-info">
-                    <div class="arrival-destination">${item.destination}${badges}</div>
-                    <div class="arrival-status">${item.status}</div>
+        arrivalList.innerHTML = items.map((item, index) => {
+            const seconds = item.currentSeconds ?? item.seconds;
+            const timeInfo = formatTime(seconds);
+
+            // 급행/막차 뱃지
+            let badges = '';
+            if (item.trainType === '급행' || item.trainType === 'ITX') {
+                badges += `<span class="train-badge express">${item.trainType}</span>`;
+            }
+            if (item.isLast) {
+                badges += `<span class="train-badge last">막차</span>`;
+            }
+
+            return `
+                <div class="arrival-item ${timeInfo.className}" data-index="${index}" style="--line-color: ${lineColor}">
+                    <span class="arrival-order" style="background-color: ${lineColor}">${index + 1}</span>
+                    <div class="arrival-info">
+                        <div class="arrival-destination">${item.destination}${badges}</div>
+                        <div class="arrival-status">${item.status}</div>
+                    </div>
+                    <div class="arrival-time" data-time-slot="${index}">
+                        ${timeInfo.html}
+                    </div>
                 </div>
-                <div class="arrival-time">
-                    ${timeInfo.html}
-                </div>
-            </div>
-        `;
-    }).join('');
+            `;
+        }).join('');
+    } else {
+        // 시간만 업데이트 (깜빡거림 방지)
+        items.forEach((item, index) => {
+            const seconds = item.currentSeconds ?? item.seconds;
+            const timeInfo = formatTime(seconds);
+            const timeSlot = arrivalList.querySelector(`[data-time-slot="${index}"]`);
+            const arrivalItem = arrivalList.querySelector(`[data-index="${index}"]`);
+
+            if (timeSlot) {
+                timeSlot.innerHTML = timeInfo.html;
+            }
+
+            if (arrivalItem) {
+                // 클래스 업데이트 (도착 임박 등)
+                arrivalItem.className = `arrival-item ${timeInfo.className}`;
+            }
+        });
+    }
 }
 
 // 시간 포맷
