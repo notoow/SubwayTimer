@@ -669,14 +669,105 @@ function getLineName(line) {
     return LINE_NAMES[line] || line;
 }
 
-// 역 검색
+// 초성 추출
+const CHOSEONG = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+
+function getChoseong(str) {
+    let result = '';
+    for (const char of str) {
+        const code = char.charCodeAt(0) - 0xAC00;
+        if (code >= 0 && code <= 11171) {
+            result += CHOSEONG[Math.floor(code / 588)];
+        } else {
+            result += char;
+        }
+    }
+    return result;
+}
+
+// 초성만으로 이루어진 문자열인지 확인
+function isChoseongOnly(str) {
+    return /^[ㄱ-ㅎ]+$/.test(str);
+}
+
+// 편집 거리 (Levenshtein Distance) - 오타 허용
+function getEditDistance(a, b) {
+    if (a.length === 0) return b.length;
+    if (b.length === 0) return a.length;
+
+    const matrix = [];
+    for (let i = 0; i <= b.length; i++) {
+        matrix[i] = [i];
+    }
+    for (let j = 0; j <= a.length; j++) {
+        matrix[0][j] = j;
+    }
+
+    for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+            if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                matrix[i][j] = matrix[i - 1][j - 1];
+            } else {
+                matrix[i][j] = Math.min(
+                    matrix[i - 1][j - 1] + 1,
+                    matrix[i][j - 1] + 1,
+                    matrix[i - 1][j] + 1
+                );
+            }
+        }
+    }
+    return matrix[b.length][a.length];
+}
+
+// 역 검색 (초성검색 + 오타 허용)
 function searchStations(query) {
     if (!query || query.length === 0) return [];
 
     const normalizedQuery = query.toLowerCase().replace(/역$/, '');
+    const isChoseong = isChoseongOnly(normalizedQuery);
 
-    return STATIONS.filter(station => {
-        const normalizedName = station.name.toLowerCase().replace(/역$/, '');
-        return normalizedName.includes(normalizedQuery);
-    }).slice(0, 10);
+    // 점수 기반 검색 결과
+    const results = STATIONS.map(station => {
+        const name = station.name.toLowerCase();
+        let score = 0;
+
+        // 1. 정확히 일치
+        if (name === normalizedQuery) {
+            score = 100;
+        }
+        // 2. 시작 부분 일치
+        else if (name.startsWith(normalizedQuery)) {
+            score = 90;
+        }
+        // 3. 포함
+        else if (name.includes(normalizedQuery)) {
+            score = 80;
+        }
+        // 4. 초성 검색
+        else if (isChoseong) {
+            const choseong = getChoseong(name);
+            if (choseong.startsWith(normalizedQuery)) {
+                score = 70;
+            } else if (choseong.includes(normalizedQuery)) {
+                score = 60;
+            }
+        }
+        // 5. 오타 허용 (편집 거리 1~2)
+        else if (normalizedQuery.length >= 2) {
+            const distance = getEditDistance(name, normalizedQuery);
+            if (distance === 1) {
+                score = 50;
+            } else if (distance === 2 && normalizedQuery.length >= 3) {
+                score = 40;
+            }
+        }
+
+        return { station, score };
+    })
+    .filter(r => r.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10)
+    .map(r => r.station);
+
+    return results;
 }
