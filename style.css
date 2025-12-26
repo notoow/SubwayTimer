@@ -586,6 +586,110 @@ body {
     font-size: 16px;
 }
 
+/* 행선지별 그룹 */
+.destination-group {
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    overflow: hidden;
+}
+
+.destination-group:last-child {
+    margin-bottom: 0;
+}
+
+.destination-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.destination-indicator {
+    width: 4px;
+    height: 20px;
+    border-radius: 2px;
+}
+
+.destination-name {
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--text-primary);
+}
+
+.trains-list {
+    padding: 4px 0;
+}
+
+.train-row {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    gap: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.train-row:last-child {
+    border-bottom: none;
+}
+
+.train-order {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-secondary);
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.train-status {
+    flex: 1;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.train-time {
+    font-size: 18px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-primary);
+    min-width: 60px;
+    text-align: right;
+}
+
+.train-row.imminent .train-time {
+    color: #EF4444;
+}
+
+.train-row.arriving .train-time {
+    color: var(--accent);
+}
+
+.train-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    margin-left: 6px;
+}
+
+.train-badge.express {
+    background: #DC2626;
+    color: white;
+}
+
+.train-badge.last {
+    background: #7C3AED;
+    color: white;
+}
+
 /* 업데이트 정보 */
 .update-info {
     padding: 8px 16px;

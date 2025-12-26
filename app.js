@@ -525,19 +525,43 @@ function startCountdown() {
     countdownInterval = setInterval(() => {
         const elapsed = Math.floor((Date.now() - lastFetchTime) / 1000);
 
-        arrivalData = arrivalData.map(item => ({
-            ...item,
-            currentSeconds: Math.max(0, item.seconds - elapsed)
-        })).filter(item => item.currentSeconds > -30);
+        // arrivalData가 그룹 구조인지 확인
+        const isGrouped = arrivalData.length > 0 && arrivalData[0].trains;
 
-        // 알림 체크
-        arrivalData.forEach((item, index) => {
-            const sec = item.currentSeconds ?? item.seconds;
-            if (sec <= notifyThreshold && sec > 0 && !notified.has(index)) {
-                notified.add(index);
-                sendNotification(`${item.destination} 열차가 약 1분 후 도착합니다`);
+        if (isGrouped) {
+            // 그룹 구조: 각 그룹의 열차들 시간 업데이트
+            arrivalData = arrivalData.map(group => ({
+                ...group,
+                trains: group.trains.map(train => ({
+                    ...train,
+                    currentSeconds: Math.max(0, train.seconds - elapsed)
+                })).filter(train => train.currentSeconds > -30)
+            })).filter(group => group.trains.length > 0);
+
+            // 알림 체크 (첫 번째 그룹의 첫 번째 열차)
+            if (arrivalData.length > 0 && arrivalData[0].trains.length > 0) {
+                const firstTrain = arrivalData[0].trains[0];
+                const sec = firstTrain.currentSeconds ?? firstTrain.seconds;
+                if (sec <= notifyThreshold && sec > 0 && !notified.has('first')) {
+                    notified.add('first');
+                    sendNotification(`${arrivalData[0].destination} 열차가 약 1분 후 도착합니다`);
+                }
             }
-        });
+        } else {
+            // 기존 flat 구조
+            arrivalData = arrivalData.map(item => ({
+                ...item,
+                currentSeconds: Math.max(0, item.seconds - elapsed)
+            })).filter(item => item.currentSeconds > -30);
+
+            arrivalData.forEach((item, index) => {
+                const sec = item.currentSeconds ?? item.seconds;
+                if (sec <= notifyThreshold && sec > 0 && !notified.has(index)) {
+                    notified.add(index);
+                    sendNotification(`${item.destination} 열차가 약 1분 후 도착합니다`);
+                }
+            });
+        }
 
         if (arrivalData.length === 0) {
             if (currentStation) {
@@ -556,63 +580,110 @@ function startCountdown() {
 // 렌더링 상태 추적 (깜빡거림 방지)
 let lastRenderedData = null;
 
-// 도착 정보 항목 렌더링 (최적화)
+// 도착 정보 항목 렌더링 (행선지별 그룹)
 function renderArrivalItems() {
     const lineColor = currentStation ? getLineColor(currentStation.line) : '#00A84D';
-    const items = arrivalData.slice(0, 3);
 
-    // 데이터 구조가 변경되었는지 확인 (행선지, 상태 등)
-    const currentDataKey = items.map(i => `${i.destination}_${i.trainType}_${i.isLast}`).join('|');
+    // arrivalData가 그룹 구조인지 확인
+    const isGrouped = arrivalData.length > 0 && arrivalData[0].trains;
+
+    if (!isGrouped) {
+        // 기존 flat 구조 (데모 모드 등)
+        renderFlatItems(lineColor);
+        return;
+    }
+
+    // 그룹 구조 렌더링
+    const currentDataKey = arrivalData.map(g =>
+        `${g.destination}:${g.trains.map(t => t.seconds).join(',')}`
+    ).join('|');
     const needsFullRender = lastRenderedData !== currentDataKey;
 
     if (needsFullRender) {
-        // 전체 다시 렌더링 (데이터 구조 변경 시)
         lastRenderedData = currentDataKey;
 
-        arrivalList.innerHTML = items.map((item, index) => {
-            const seconds = item.currentSeconds ?? item.seconds;
-            const timeInfo = formatTime(seconds);
+        arrivalList.innerHTML = arrivalData.map((group, gIdx) => {
+            const trainsHtml = group.trains.map((train, tIdx) => {
+                const seconds = train.currentSeconds ?? train.seconds;
+                const timeInfo = formatTime(seconds);
 
-            // 급행/막차 뱃지
-            let badges = '';
-            if (item.trainType === '급행' || item.trainType === 'ITX') {
-                badges += `<span class="train-badge express">${item.trainType}</span>`;
-            }
-            if (item.isLast) {
-                badges += `<span class="train-badge last">막차</span>`;
-            }
+                let badges = '';
+                if (train.trainType === '급행' || train.trainType === 'ITX') {
+                    badges += `<span class="train-badge express">${train.trainType}</span>`;
+                }
+                if (train.isLast) {
+                    badges += `<span class="train-badge last">막차</span>`;
+                }
+
+                return `
+                    <div class="train-row ${timeInfo.className}" data-group="${gIdx}" data-train="${tIdx}">
+                        <span class="train-order">${tIdx + 1}</span>
+                        <span class="train-status">${train.status}${badges}</span>
+                        <span class="train-time" data-time-slot="${gIdx}-${tIdx}">${timeInfo.html}</span>
+                    </div>
+                `;
+            }).join('');
 
             return `
-                <div class="arrival-item ${timeInfo.className}" data-index="${index}" style="--line-color: ${lineColor}">
-                    <span class="arrival-order" style="background-color: ${lineColor}">${index + 1}</span>
-                    <div class="arrival-info">
-                        <div class="arrival-destination">${item.destination}${badges}</div>
-                        <div class="arrival-status">${item.status}</div>
+                <div class="destination-group" style="--line-color: ${lineColor}">
+                    <div class="destination-header">
+                        <span class="destination-indicator" style="background-color: ${lineColor}"></span>
+                        <span class="destination-name">${group.destination}</span>
                     </div>
-                    <div class="arrival-time" data-time-slot="${index}">
-                        ${timeInfo.html}
+                    <div class="trains-list">
+                        ${trainsHtml}
                     </div>
                 </div>
             `;
         }).join('');
     } else {
-        // 시간만 업데이트 (깜빡거림 방지)
-        items.forEach((item, index) => {
-            const seconds = item.currentSeconds ?? item.seconds;
-            const timeInfo = formatTime(seconds);
-            const timeSlot = arrivalList.querySelector(`[data-time-slot="${index}"]`);
-            const arrivalItem = arrivalList.querySelector(`[data-index="${index}"]`);
+        // 시간만 업데이트
+        arrivalData.forEach((group, gIdx) => {
+            group.trains.forEach((train, tIdx) => {
+                const seconds = train.currentSeconds ?? train.seconds;
+                const timeInfo = formatTime(seconds);
+                const timeSlot = arrivalList.querySelector(`[data-time-slot="${gIdx}-${tIdx}"]`);
+                const trainRow = arrivalList.querySelector(`[data-group="${gIdx}"][data-train="${tIdx}"]`);
 
-            if (timeSlot) {
-                timeSlot.innerHTML = timeInfo.html;
-            }
-
-            if (arrivalItem) {
-                // 클래스 업데이트 (도착 임박 등)
-                arrivalItem.className = `arrival-item ${timeInfo.className}`;
-            }
+                if (timeSlot) {
+                    timeSlot.innerHTML = timeInfo.html;
+                }
+                if (trainRow) {
+                    trainRow.className = `train-row ${timeInfo.className}`;
+                }
+            });
         });
     }
+}
+
+// 기존 flat 구조 렌더링 (데모 모드용)
+function renderFlatItems(lineColor) {
+    const items = arrivalData.slice(0, 4);
+    arrivalList.innerHTML = items.map((item, index) => {
+        const seconds = item.currentSeconds ?? item.seconds;
+        const timeInfo = formatTime(seconds);
+
+        let badges = '';
+        if (item.trainType === '급행' || item.trainType === 'ITX') {
+            badges += `<span class="train-badge express">${item.trainType}</span>`;
+        }
+        if (item.isLast) {
+            badges += `<span class="train-badge last">막차</span>`;
+        }
+
+        return `
+            <div class="arrival-item ${timeInfo.className}" data-index="${index}" style="--line-color: ${lineColor}">
+                <span class="arrival-order" style="background-color: ${lineColor}">${index + 1}</span>
+                <div class="arrival-info">
+                    <div class="arrival-destination">${item.destination}${badges}</div>
+                    <div class="arrival-status">${item.status}</div>
+                </div>
+                <div class="arrival-time" data-time-slot="${index}">
+                    ${timeInfo.html}
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
 // 시간 포맷
@@ -662,30 +733,60 @@ function renderArrivals(arrivals, selectedLine) {
 
     const now = Date.now();
 
-    arrivalData = filtered.slice(0, 3).map(arrival => {
-        // barvlDt: 열차 도착 예정 시간 (초) - recptnDt 기준
+    // 모든 열차 데이터 변환
+    const allTrains = filtered.map(arrival => {
         let seconds = parseInt(arrival.barvlDt) || 0;
         const status = arrival.arvlMsg2 || '';
 
-        // recptnDt로 시간 보정 (데이터 생성 시각과 현재 시각의 차이만큼 보정)
+        // recptnDt로 시간 보정
         if (arrival.recptnDt) {
             try {
                 const recptnTime = new Date(arrival.recptnDt).getTime();
-                const timeDiff = Math.floor((now - recptnTime) / 1000); // 초 단위
+                const timeDiff = Math.floor((now - recptnTime) / 1000);
                 seconds = Math.max(0, seconds - timeDiff);
             } catch (e) {
                 console.warn('recptnDt 파싱 실패:', arrival.recptnDt);
             }
         }
 
+        // 행선지 추출 (bstatnNm 우선, 없으면 trainLineNm에서 추출)
+        let destination = arrival.bstatnNm || '';
+        if (!destination && arrival.trainLineNm) {
+            // "오금행 - 대화방면" 형태에서 "오금" 추출
+            const match = arrival.trainLineNm.match(/^(.+?)행/);
+            destination = match ? match[1] : arrival.trainLineNm;
+        }
+
         return {
             seconds,
-            destination: arrival.trainLineNm || (arrival.bstatnNm + '행'),
+            destination: destination + '행',
+            destinationKey: destination, // 그룹화 키
             status: status,
             trainType: arrival.btrainSttus || '일반',
-            isLast: arrival.lstcarAt === '1'
+            isLast: arrival.lstcarAt === '1',
+            trainLineNm: arrival.trainLineNm || ''
         };
     });
+
+    // 행선지별로 그룹화
+    const grouped = {};
+    allTrains.forEach(train => {
+        const key = train.destinationKey;
+        if (!grouped[key]) {
+            grouped[key] = [];
+        }
+        if (grouped[key].length < 4) { // 행선지당 최대 4개
+            grouped[key].push(train);
+        }
+    });
+
+    // 시간순 정렬된 그룹 배열로 변환
+    arrivalData = Object.entries(grouped)
+        .map(([dest, trains]) => ({
+            destination: dest + '행',
+            trains: trains.sort((a, b) => a.seconds - b.seconds)
+        }))
+        .sort((a, b) => a.trains[0].seconds - b.trains[0].seconds); // 첫 열차 도착순
 
     renderArrivalItems();
 }
@@ -873,8 +974,24 @@ function updateLeaveAlert() {
         return;
     }
 
-    const first = arrivalData[0];
-    const trainSeconds = first.currentSeconds ?? first.seconds;
+    // 그룹 구조/flat 구조 모두 지원
+    const isGrouped = arrivalData[0].trains;
+    let firstTrain, destination;
+
+    if (isGrouped) {
+        if (arrivalData[0].trains.length === 0) {
+            leaveAlert.classList.add('hidden');
+            if (displayLeaveAlert) displayLeaveAlert.classList.add('hidden');
+            return;
+        }
+        firstTrain = arrivalData[0].trains[0];
+        destination = arrivalData[0].destination;
+    } else {
+        firstTrain = arrivalData[0];
+        destination = firstTrain.destination;
+    }
+
+    const trainSeconds = firstTrain.currentSeconds ?? firstTrain.seconds;
     const walkingSeconds = currentWalkingTime * 60;
     const bufferSeconds = 60; // 1분 여유
 
@@ -893,7 +1010,7 @@ function updateLeaveAlert() {
 
         // 알림 발송 (한 번만)
         if (!leaveNotified && notifyEnabled) {
-            sendNotification(`${currentStation.name}역으로 지금 출발하세요! ${first.destination} 열차가 곧 도착합니다.`);
+            sendNotification(`${currentStation.name}역으로 지금 출발하세요! ${destination} 열차가 곧 도착합니다.`);
             leaveNotified = true;
         }
     } else if (leaveInSeconds <= 180) {
