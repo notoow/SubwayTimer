@@ -637,9 +637,14 @@ function renderArrivalItems() {
                     badges += `<span class="train-badge last">막차</span>`;
                 }
 
+                let orderLabel = (tIdx + 1).toString();
+                if (tIdx === 0) orderLabel = '이번';
+                else if (tIdx === 1) orderLabel = '다음';
+                else if (tIdx === 2) orderLabel = '다다음';
+
                 return `
                     <div class="train-row ${timeInfo.className}" data-group="${gIdx}" data-train="${tIdx}">
-                        <span class="train-order">${tIdx + 1}</span>
+                        <span class="train-order badge">${orderLabel}</span>
                         <span class="train-status">${train.status}${badges}</span>
                         <span class="train-time" data-time-slot="${gIdx}-${tIdx}">${timeInfo.html}</span>
                     </div>
@@ -673,14 +678,14 @@ function renderArrivalItems() {
             group.trains.forEach((train, tIdx) => {
                 const seconds = train.currentSeconds ?? train.seconds;
                 const timeInfo = formatTime(seconds);
-                const timeSlot = arrivalList.querySelector(`[data-time-slot="${gIdx}-${tIdx}"]`);
-                const trainRow = arrivalList.querySelector(`[data-group="${gIdx}"][data-train="${tIdx}"]`);
+                const timeSlot = arrivalList.querySelector(`[data - time - slot="${gIdx}-${tIdx}"]`);
+                const trainRow = arrivalList.querySelector(`[data - group= "${gIdx}"][data - train="${tIdx}"]`);
 
                 if (timeSlot) {
                     timeSlot.innerHTML = timeInfo.html;
                 }
                 if (trainRow) {
-                    trainRow.className = `train-row ${timeInfo.className}`;
+                    trainRow.className = `train - row ${timeInfo.className} `;
                 }
             });
         });
@@ -696,14 +701,14 @@ function renderFlatItems(lineColor) {
 
         let badges = '';
         if (item.trainType === '급행' || item.trainType === 'ITX') {
-            badges += `<span class="train-badge express">${item.trainType}</span>`;
+            badges += `< span class="train-badge express" > ${item.trainType}</span > `;
         }
         if (item.isLast) {
-            badges += `<span class="train-badge last">막차</span>`;
+            badges += `< span class="train-badge last" > 막차</span > `;
         }
 
         return `
-            <div class="arrival-item ${timeInfo.className}" data-index="${index}" style="--line-color: ${lineColor}">
+                < div class="arrival-item ${timeInfo.className}" data - index="${index}" style = "--line-color: ${lineColor}" >
                 <span class="arrival-order" style="background-color: ${lineColor}">${index + 1}</span>
                 <div class="arrival-info">
                     <div class="arrival-destination">${item.destination}${badges}</div>
@@ -712,23 +717,30 @@ function renderFlatItems(lineColor) {
                 <div class="arrival-time" data-time-slot="${index}">
                     ${timeInfo.html}
                 </div>
-            </div>
-        `;
+            </div >
+                `;
     }).join('');
 }
 
 // 시간 포맷
 function formatTime(seconds) {
     if (seconds <= 0) {
-        return {
-            html: '<span class="time-value">도착</span>',
-            className: 'arriving'
-        };
+        if (seconds > -10) {
+            return {
+                html: '<span class="time-value">도착</span>',
+                className: 'arriving'
+            };
+        } else {
+            return {
+                html: '<span class="time-value">출발</span>',
+                className: 'departing' // CSS class needs to be added/checked
+            };
+        }
     }
 
     if (seconds < 60) {
         return {
-            html: `<span class="time-value">${seconds}</span><span class="time-unit">초</span>`,
+            html: `< span class="time-value" > ${seconds}</span > <span class="time-unit">초</span>`,
             className: 'imminent'
         };
     }
@@ -738,13 +750,13 @@ function formatTime(seconds) {
 
     if (minutes < 3) {
         return {
-            html: `<span class="time-value">${minutes}:${secs.toString().padStart(2, '0')}</span>`,
+            html: `< span class="time-value" > ${minutes}:${secs.toString().padStart(2, '0')}</span > `,
             className: 'imminent'
         };
     }
 
     return {
-        html: `<span class="time-value">${minutes}</span><span class="time-unit">분</span>`,
+        html: `< span class="time-value" > ${minutes}</span > <span class="time-unit">분</span>`,
         className: ''
     };
 }
@@ -767,7 +779,7 @@ function renderArrivals(arrivals) {
     // 디버깅: 모든 열차의 방향 정보 확인
     console.log('=== 도착 정보 ===');
     arrivals.forEach(a => {
-        console.log(`${a.bstatnNm || a.trainLineNm} | 방향: ${a.updnLine} | 호선: ${a.subwayId} | 도착: ${a.barvlDt}초`);
+        console.log(`${a.bstatnNm || a.trainLineNm} | 방향: ${a.updnLine} | 호선: ${a.subwayId} | 도착: ${a.barvlDt} 초`);
     });
 
     // 선택한 호선의 subwayId
@@ -798,7 +810,7 @@ function renderArrivals(arrivals) {
         }
     });
 
-    console.log(`필터링 결과: ${filtered.length}개 (${currentDirection})`);
+    console.log(`필터링 결과: ${filtered.length} 개(${currentDirection})`);
 
     if (filtered.length === 0) {
         showNoData();
@@ -861,7 +873,7 @@ function renderArrivals(arrivals) {
         if (!grouped[key]) {
             grouped[key] = [];
         }
-        if (grouped[key].length < 4) { // 행선지당 최대 4개
+        if (grouped[key].length < 3) { // 행선지당 최대 3개 (이번, 다음, 다다음)
             grouped[key].push(train);
         }
     });
@@ -880,37 +892,37 @@ function renderArrivals(arrivals) {
 // 로딩 표시
 function showLoading() {
     arrivalList.innerHTML = `
-        <div class="loading">
+                < div class="loading" >
             <div class="loading-spinner"></div>
             <span>도착 정보를 불러오는 중...</span>
-        </div>
-    `;
+        </div >
+                `;
 }
 
 // 데이터 없음 표시
 function showNoData() {
     arrivalList.innerHTML = `
-        <div class="no-data">
-            <p>현재 도착 예정 열차가 없습니다</p>
-        </div>
-    `;
+                < div class="no-data" >
+                    <p>현재 도착 예정 열차가 없습니다</p>
+        </div >
+                `;
 }
 
 // 에러 표시
 function showError(message) {
     arrivalList.innerHTML = `
-        <div class="error">
-            <p>${message}</p>
-        </div>
-    `;
+                < div class="error" >
+                    <p>${message}</p>
+        </div >
+                `;
 }
 
 // 즐겨찾기 토글
 function toggleFavorite() {
     if (!currentStation) return;
 
-    const key = `${currentStation.name}_${currentStation.line}`;
-    const index = favorites.findIndex(f => `${f.name}_${f.line}` === key);
+    const key = `${currentStation.name}_${currentStation.line} `;
+    const index = favorites.findIndex(f => `${f.name}_${f.line} ` === key);
 
     if (index >= 0) {
         favorites.splice(index, 1);
@@ -932,8 +944,8 @@ function updateFavoriteButton() {
         return;
     }
 
-    const key = `${currentStation.name}_${currentStation.line}`;
-    const isFavorite = favorites.some(f => `${f.name}_${f.line}` === key);
+    const key = `${currentStation.name}_${currentStation.line} `;
+    const isFavorite = favorites.some(f => `${f.name}_${f.line} ` === key);
     favoriteBtn.classList.toggle('active', isFavorite);
 }
 
@@ -945,14 +957,14 @@ function renderFavorites() {
     }
 
     favoritesList.innerHTML = favorites.map(station => `
-        <div class="favorite-chip" data-station="${station.name}" data-line="${station.line}">
+                < div class="favorite-chip" data - station="${station.name}" data - line="${station.line}" >
             <span class="favorite-chip-line" style="background-color: ${getLineColor(station.line)}">
                 ${getLineName(station.line)}
             </span>
             <span class="favorite-chip-name">${station.name}</span>
             <button class="favorite-chip-remove" data-station="${station.name}" data-line="${station.line}">&times;</button>
-        </div>
-    `).join('');
+        </div >
+                `).join('');
 
     favoritesList.querySelectorAll('.favorite-chip').forEach(chip => {
         chip.addEventListener('click', (e) => {
@@ -974,8 +986,8 @@ function renderFavorites() {
 
 // 즐겨찾기 삭제
 function removeFavorite(station) {
-    const key = `${station.name}_${station.line}`;
-    favorites = favorites.filter(f => `${f.name}_${f.line}` !== key);
+    const key = `${station.name}_${station.line} `;
+    favorites = favorites.filter(f => `${f.name}_${f.line} ` !== key);
     saveFavorites();
     updateFavoriteButton();
     renderFavorites();
@@ -1020,7 +1032,7 @@ function saveWalkingTimes() {
 }
 
 function getStationKey(station) {
-    return `${station.name}_${station.line}`;
+    return `${station.name}_${station.line} `;
 }
 
 function adjustWalkingTime(delta) {
@@ -1265,7 +1277,7 @@ function updateDisplayMode() {
         const m1 = Math.floor(sec1 / 60);
         const s1 = sec1 % 60;
         nextTrain1.querySelector('.next-time').textContent =
-            sec1 <= 0 ? '도착' : `${m1.toString().padStart(2, '0')}:${s1.toString().padStart(2, '0')}`;
+            sec1 <= 0 ? '도착' : `${m1.toString().padStart(2, '0')}:${s1.toString().padStart(2, '0')} `;
     } else {
         nextTrain1.querySelector('.next-time').textContent = '--:--';
     }
@@ -1275,7 +1287,7 @@ function updateDisplayMode() {
         const m2 = Math.floor(sec2 / 60);
         const s2 = sec2 % 60;
         nextTrain2.querySelector('.next-time').textContent =
-            sec2 <= 0 ? '도착' : `${m2.toString().padStart(2, '0')}:${s2.toString().padStart(2, '0')}`;
+            sec2 <= 0 ? '도착' : `${m2.toString().padStart(2, '0')}:${s2.toString().padStart(2, '0')} `;
     } else {
         nextTrain2.querySelector('.next-time').textContent = '--:--';
     }
