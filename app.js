@@ -753,13 +753,13 @@ function formatTime(seconds) {
 const lineToSubwayId = {
     '1': '1001', '2': '1002', '3': '1003', '4': '1004', '5': '1005',
     '6': '1006', '7': '1007', '8': '1008', '9': '1009',
-    'K': '1063', // 경의중앙선
-    'A': '1065', // 공항철도
-    'G': '1067', // 경춘선
-    'I': '1075', // 수인분당선
-    'S': '1077', // 신분당선
-    'U': '1092', // 우이신설선
-    'E': '1032', // GTX-A (수서~동탄)
+    '경의중앙': '1063',
+    '공항철도': '1065',
+    '경춘': '1067',
+    '수인분당': '1075',
+    '신분당': '1077',
+    '우이신설': '1092',
+    'GTX-A': '1032',
 };
 
 // 도착 정보 렌더링 (API 응답 처리)
@@ -776,6 +776,13 @@ function renderArrivals(arrivals) {
     const filtered = arrivals.filter(arrival => {
         // 호선 필터링 (선택한 호선만)
         if (targetSubwayId && arrival.subwayId !== targetSubwayId) {
+            return false;
+        }
+
+        // 0초이고 "도착", "진입", "출발" 상태면 제외 (이미 지나간 열차)
+        const barvlDt = parseInt(arrival.barvlDt) || 0;
+        const arvlMsg = (arrival.arvlMsg2 || '').toLowerCase();
+        if (barvlDt === 0 && (arvlMsg.includes('도착') || arvlMsg.includes('진입') || arvlMsg.includes('출발'))) {
             return false;
         }
 

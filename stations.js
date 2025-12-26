@@ -482,6 +482,17 @@ const STATIONS = [
     { name: '광교중앙', line: '신분당' },
     { name: '광교', line: '신분당' },
 
+    // GTX-A
+    { name: '수서', line: 'GTX-A' },
+    { name: '성남', line: 'GTX-A' },
+    { name: '구성', line: 'GTX-A' },
+    { name: '동탄', line: 'GTX-A' },
+    { name: '서울역', line: 'GTX-A' },
+    { name: '연신내', line: 'GTX-A' },
+    { name: '대곡', line: 'GTX-A' },
+    { name: '킨텍스', line: 'GTX-A' },
+    { name: '운정중앙', line: 'GTX-A' },
+
     // 경의중앙선
     { name: '문산', line: '경의중앙' },
     { name: '파주', line: '경의중앙' },
