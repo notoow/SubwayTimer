@@ -2,13 +2,16 @@
 let currentStation = null;
 let currentDirection = 'up';
 let favorites = [];
-let apiKey = '';
+let apiKey = '46774f6a4d74616e38394361555279'; // Seoul Open Data API Key
 let refreshInterval = null;
 let countdownInterval = null;
 let arrivalData = [];
 let lastFetchTime = null;
 let notifyEnabled = false;
 let notifyThreshold = 60; // 1분 전 알림
+let walkingTimes = {}; // 역별 도보 시간 저장
+let currentWalkingTime = 0; // 현재 선택된 역의 도보 시간 (분)
+let leaveNotified = false; // 출발 알림 발송 여부
 
 // DOM 요소
 const stationInput = document.getElementById('stationInput');
@@ -21,8 +24,6 @@ const arrivalList = document.getElementById('arrivalList');
 const favoriteBtn = document.getElementById('favoriteBtn');
 const favoritesList = document.getElementById('favoritesList');
 const directionTabs = document.querySelectorAll('.direction-tab');
-const apiKeyInput = document.getElementById('apiKeyInput');
-const saveApiKeyBtn = document.getElementById('saveApiKey');
 const themeToggle = document.getElementById('themeToggle');
 const refreshBtn = document.getElementById('refreshBtn');
 const shareBtn = document.getElementById('shareBtn');
@@ -43,6 +44,13 @@ const displayDestination = document.getElementById('displayDestination');
 const displayCongestion = document.getElementById('displayCongestion');
 const nextTrain1 = document.getElementById('nextTrain1');
 const nextTrain2 = document.getElementById('nextTrain2');
+const walkingMinus = document.getElementById('walkingMinus');
+const walkingPlus = document.getElementById('walkingPlus');
+const walkingTimeValue = document.getElementById('walkingTimeValue');
+const leaveAlert = document.getElementById('leaveAlert');
+const leaveAlertText = document.getElementById('leaveAlertText');
+const displayLeaveAlert = document.getElementById('displayLeaveAlert');
+const displayLeaveText = document.getElementById('displayLeaveText');
 
 let isDisplayMode = false;
 let displayInterval = null;
@@ -53,6 +61,7 @@ function init() {
     loadApiKey();
     loadFavorites();
     loadNotifySettings();
+    loadWalkingTimes();
     setupEventListeners();
     renderFavorites();
     checkUrlParams();
@@ -128,9 +137,6 @@ function setupEventListeners() {
     // 즐겨찾기 버튼
     favoriteBtn.addEventListener('click', toggleFavorite);
 
-    // API 키 저장
-    saveApiKeyBtn.addEventListener('click', saveApiKey);
-
     // 테마 토글
     themeToggle.addEventListener('click', toggleTheme);
 
@@ -156,6 +162,10 @@ function setupEventListeners() {
 
     // 전광판 모드에서 클릭하면 전체화면 토글
     displayMode.addEventListener('dblclick', toggleFullscreen);
+
+    // 도보 시간 조절
+    walkingMinus.addEventListener('click', () => adjustWalkingTime(-1));
+    walkingPlus.addEventListener('click', () => adjustWalkingTime(1));
 }
 
 // 테마 관련
@@ -372,6 +382,9 @@ function selectStation(station) {
     // 혼잡도 업데이트
     updateCongestion();
 
+    // 도보 시간 로드
+    loadStationWalkingTime();
+
     // URL 업데이트
     updateUrl();
 
@@ -396,7 +409,7 @@ async function fetchArrivalInfo(station) {
     showLoading();
 
     try {
-        const url = `http://swopenapi.seoul.go.kr/api/subway/${apiKey}/json/realtimeStationArrival/0/10/${encodeURIComponent(station.name)}`;
+        const url = `https://swopenapi.seoul.go.kr/api/subway/${apiKey}/json/realtimeStationArrival/0/10/${encodeURIComponent(station.name)}`;
 
         const response = await fetch(url);
         const data = await response.json();
@@ -427,14 +440,35 @@ async function fetchArrivalInfo(station) {
     }
 }
 
+// 호선별 행선지 데이터
+const lineDestinations = {
+    '1': { up: ['소요산행', '의정부행', '동두천행'], down: ['인천행', '신창행', '천안행'] },
+    '2': { up: ['성수행', '신도림행', '까치산행'], down: ['잠실행', '강남행', '사당행'] },
+    '3': { up: ['대화행', '원당행', '삼송행'], down: ['오금행', '수서행', '경찰병원행'] },
+    '4': { up: ['당고개행', '노원행', '창동행'], down: ['오이도행', '안산행', '금정행'] },
+    '5': { up: ['방화행', '김포공항행', '개화산행'], down: ['마천행', '상일동행', '하남검단산행'] },
+    '6': { up: ['응암순환', '구산행', '역촌행'], down: ['신내행', '봉화산행', '태릉입구행'] },
+    '7': { up: ['장암행', '도봉산행', '수락산행'], down: ['청라국제도시행', '온수행', '부평구청행'] },
+    '8': { up: ['암사행', '강동구청행', '몽촌토성행'], down: ['모란행', '복정행', '장지행'] },
+    '9': { up: ['개화행', '김포공항행', '공항시장행'], down: ['중앙보훈병원행', '종합운동장행', '석촌행'] },
+    'K': { up: ['문산행', '일산행', '대곡행'], down: ['서울역행', '용문행', '청량리행'] },
+    'A': { up: ['서울역행', '청라국제도시행', '계양행'], down: ['인천공항2터미널행', '인천공항1터미널행', '검암행'] },
+    'S': { up: ['신사행', '강남행', '양재시민의숲행'], down: ['광교행', '정자행', '판교행'] },
+    'U': { up: ['북한산우이행', '정릉행', '솔밭공원행'], down: ['신설동행', '보문행', '성신여대입구행'] },
+    'I': { up: ['청량리행', '왕십리행', '서울숲행'], down: ['인천행', '오이도행', '수원행'] },
+    'G': { up: ['청량리행', '망우행', '상봉행'], down: ['춘천행', '가평행', '강촌행'] },
+    'B': { up: ['왕십리행', '선정릉행', '압구정로데오행'], down: ['수원행', '죽전행', '기흥행'] }
+};
+
 // 데모 모드 표시
 function showDemoMode(station) {
     lastFetchTime = Date.now();
     updateLastUpdateTime();
 
-    const destinations = currentDirection === 'up'
-        ? ['서울역행', '청량리행', '의정부행']
-        : ['인천행', '신도림행', '구로행'];
+    // 호선에 맞는 행선지 가져오기
+    const line = station.line || '2';
+    const lineData = lineDestinations[line] || lineDestinations['2'];
+    const destinations = currentDirection === 'up' ? lineData.up : lineData.down;
 
     arrivalData = [
         { seconds: 45, destination: destinations[0], status: '전역 출발' },
@@ -479,6 +513,9 @@ function startCountdown() {
         }
 
         renderArrivalItems();
+
+        // 출발 알림 업데이트
+        updateLeaveAlert();
     }, 1000);
 }
 
@@ -490,11 +527,20 @@ function renderArrivalItems() {
         const seconds = item.currentSeconds ?? item.seconds;
         const timeInfo = formatTime(seconds);
 
+        // 급행/막차 뱃지
+        let badges = '';
+        if (item.trainType === '급행' || item.trainType === 'ITX') {
+            badges += `<span class="train-badge express">${item.trainType}</span>`;
+        }
+        if (item.isLast) {
+            badges += `<span class="train-badge last">막차</span>`;
+        }
+
         return `
             <div class="arrival-item ${timeInfo.className}" style="--line-color: ${lineColor}">
                 <span class="arrival-order" style="background-color: ${lineColor}">${index + 1}</span>
                 <div class="arrival-info">
-                    <div class="arrival-destination">${item.destination}</div>
+                    <div class="arrival-destination">${item.destination}${badges}</div>
                     <div class="arrival-status">${item.status}</div>
                 </div>
                 <div class="arrival-time">
@@ -550,11 +596,29 @@ function renderArrivals(arrivals, selectedLine) {
         return;
     }
 
-    arrivalData = filtered.slice(0, 3).map(arrival => ({
-        seconds: parseInt(arrival.barvlDt) || 0,
-        destination: arrival.trainLineNm || (arrival.bstatnNm + '행'),
-        status: arrival.arvlMsg2 || ''
-    }));
+    const now = Date.now();
+
+    arrivalData = filtered.slice(0, 3).map(arrival => {
+        let seconds = parseInt(arrival.barvlDt) || 0;
+
+        // recptnDt 기반 시간 보정 (API 문서 권장사항)
+        // 데이터 생성 시각과 현재 시각의 차이만큼 빼줌
+        if (arrival.recptnDt) {
+            const recptnTime = new Date(arrival.recptnDt).getTime();
+            const timeDiff = Math.floor((now - recptnTime) / 1000);
+            if (timeDiff > 0 && timeDiff < 300) { // 5분 이내만 보정
+                seconds = Math.max(0, seconds - timeDiff);
+            }
+        }
+
+        return {
+            seconds,
+            destination: arrival.trainLineNm || (arrival.bstatnNm + '행'),
+            status: arrival.arvlMsg2 || '',
+            trainType: arrival.btrainSttus || '일반', // 급행/일반
+            isLast: arrival.lstcarAt === '1' // 막차 여부
+        };
+    });
 
     renderArrivalItems();
 }
@@ -679,23 +743,109 @@ function loadFavorites() {
     }
 }
 
-// API 키 저장
-function saveApiKey() {
-    apiKey = apiKeyInput.value.trim();
-    localStorage.setItem('subwayTimer_apiKey', apiKey);
-    apiKeyInput.value = '';
-    showToast('API 키가 저장되었습니다');
-
-    if (currentStation) {
-        fetchArrivalInfo(currentStation);
+// API 키 로드 (사용자가 직접 입력한 키가 있으면 그걸 사용)
+function loadApiKey() {
+    const savedKey = localStorage.getItem('subwayTimer_apiKey');
+    if (savedKey) {
+        apiKey = savedKey;
     }
 }
 
-// API 키 로드
-function loadApiKey() {
-    apiKey = localStorage.getItem('subwayTimer_apiKey') || '';
-    if (apiKey) {
-        apiKeyInput.placeholder = 'API 키가 저장되어 있습니다';
+// ===== 도보 시간 관리 =====
+function loadWalkingTimes() {
+    try {
+        const saved = localStorage.getItem('subwayTimer_walkingTimes');
+        walkingTimes = saved ? JSON.parse(saved) : {};
+    } catch {
+        walkingTimes = {};
+    }
+}
+
+function saveWalkingTimes() {
+    localStorage.setItem('subwayTimer_walkingTimes', JSON.stringify(walkingTimes));
+}
+
+function getStationKey(station) {
+    return `${station.name}_${station.line}`;
+}
+
+function adjustWalkingTime(delta) {
+    if (!currentStation) return;
+
+    currentWalkingTime = Math.max(0, Math.min(60, currentWalkingTime + delta));
+    walkingTimeValue.textContent = currentWalkingTime;
+
+    // 저장
+    const key = getStationKey(currentStation);
+    walkingTimes[key] = currentWalkingTime;
+    saveWalkingTimes();
+
+    // 출발 알림 초기화
+    leaveNotified = false;
+    updateLeaveAlert();
+}
+
+function loadStationWalkingTime() {
+    if (!currentStation) {
+        currentWalkingTime = 0;
+        walkingTimeValue.textContent = '0';
+        return;
+    }
+
+    const key = getStationKey(currentStation);
+    currentWalkingTime = walkingTimes[key] || 0;
+    walkingTimeValue.textContent = currentWalkingTime;
+    leaveNotified = false;
+}
+
+// 출발 알림 업데이트
+function updateLeaveAlert() {
+    if (!currentStation || arrivalData.length === 0 || currentWalkingTime === 0) {
+        leaveAlert.classList.add('hidden');
+        if (displayLeaveAlert) displayLeaveAlert.classList.add('hidden');
+        return;
+    }
+
+    const first = arrivalData[0];
+    const trainSeconds = first.currentSeconds ?? first.seconds;
+    const walkingSeconds = currentWalkingTime * 60;
+    const bufferSeconds = 60; // 1분 여유
+
+    // 출발해야 하는 시간 = 열차 도착 시간 - 도보 시간 - 여유 시간
+    const leaveInSeconds = trainSeconds - walkingSeconds - bufferSeconds;
+
+    if (leaveInSeconds <= 0) {
+        // 지금 출발해야 함
+        leaveAlert.classList.remove('hidden', 'warning');
+        leaveAlertText.textContent = '지금 출발하세요!';
+
+        if (displayLeaveAlert) {
+            displayLeaveAlert.classList.remove('hidden', 'warning');
+            displayLeaveText.textContent = '지금 출발!';
+        }
+
+        // 알림 발송 (한 번만)
+        if (!leaveNotified && notifyEnabled) {
+            sendNotification(`${currentStation.name}역으로 지금 출발하세요! ${first.destination} 열차가 곧 도착합니다.`);
+            leaveNotified = true;
+        }
+    } else if (leaveInSeconds <= 180) {
+        // 3분 이내 출발
+        const mins = Math.floor(leaveInSeconds / 60);
+        const secs = leaveInSeconds % 60;
+
+        leaveAlert.classList.remove('hidden');
+        leaveAlert.classList.add('warning');
+        leaveAlertText.textContent = `${mins}분 ${secs}초 후 출발`;
+
+        if (displayLeaveAlert) {
+            displayLeaveAlert.classList.remove('hidden');
+            displayLeaveAlert.classList.add('warning');
+            displayLeaveText.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')} 후 출발`;
+        }
+    } else {
+        leaveAlert.classList.add('hidden');
+        if (displayLeaveAlert) displayLeaveAlert.classList.add('hidden');
     }
 }
 
@@ -788,6 +938,9 @@ function updateDisplayMode() {
 
     // 혼잡도 업데이트
     updateDisplayCongestion();
+
+    // 출발 알림 업데이트
+    updateLeaveAlert();
 }
 
 function updateDisplayCongestion() {
