@@ -1,4 +1,4 @@
-name = "subway-api"
+name = "subway-timer"
 main = "cloudflare-worker.js"
 compatibility_date = "2024-01-01"
 
