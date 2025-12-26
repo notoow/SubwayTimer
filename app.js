@@ -409,7 +409,9 @@ async function fetchArrivalInfo(station) {
     showLoading();
 
     try {
-        const url = `http://swopenapi.seoul.go.kr/api/subway/${apiKey}/json/realtimeStationArrival/0/10/${encodeURIComponent(station.name)}`;
+        // CORS 프록시 사용 (GitHub Pages에서 직접 호출 불가)
+        const apiUrl = `http://swopenapi.seoul.go.kr/api/subway/${apiKey}/json/realtimeStationArrival/0/10/${encodeURIComponent(station.name)}`;
+        const url = `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`;
 
         const response = await fetch(url);
         const data = await response.json();
