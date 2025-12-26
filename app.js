@@ -5,8 +5,10 @@ let favorites = [];
 let apiKey = '';
 let refreshInterval = null;
 let countdownInterval = null;
-let arrivalData = []; // 현재 표시중인 도착 정보
-let lastFetchTime = null; // 마지막 API 호출 시간
+let arrivalData = [];
+let lastFetchTime = null;
+let notifyEnabled = false;
+let notifyThreshold = 60; // 1분 전 알림
 
 // DOM 요소
 const stationInput = document.getElementById('stationInput');
@@ -21,13 +23,48 @@ const favoritesList = document.getElementById('favoritesList');
 const directionTabs = document.querySelectorAll('.direction-tab');
 const apiKeyInput = document.getElementById('apiKeyInput');
 const saveApiKeyBtn = document.getElementById('saveApiKey');
+const themeToggle = document.getElementById('themeToggle');
+const refreshBtn = document.getElementById('refreshBtn');
+const shareBtn = document.getElementById('shareBtn');
+const notifyBtn = document.getElementById('notifyBtn');
+const congestionFill = document.getElementById('congestionFill');
+const congestionText = document.getElementById('congestionText');
+const lastUpdate = document.getElementById('lastUpdate');
+const toast = document.getElementById('toast');
 
 // 초기화
 function init() {
+    loadTheme();
     loadApiKey();
     loadFavorites();
+    loadNotifySettings();
     setupEventListeners();
     renderFavorites();
+    checkUrlParams();
+}
+
+// URL 파라미터 확인
+function checkUrlParams() {
+    const params = new URLSearchParams(window.location.search);
+    const stationParam = params.get('station');
+    const lineParam = params.get('line');
+    const dirParam = params.get('dir');
+
+    if (stationParam) {
+        const station = {
+            name: stationParam,
+            line: lineParam || '2'
+        };
+
+        if (dirParam === 'down') {
+            currentDirection = 'down';
+            directionTabs.forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.direction === 'down');
+            });
+        }
+
+        selectStation(station);
+    }
 }
 
 // 이벤트 리스너 설정
@@ -67,6 +104,8 @@ function setupEventListeners() {
             tab.classList.add('active');
             if (currentStation) {
                 fetchArrivalInfo(currentStation);
+                updateCongestion();
+                updateUrl();
             }
         });
     });
@@ -76,6 +115,180 @@ function setupEventListeners() {
 
     // API 키 저장
     saveApiKeyBtn.addEventListener('click', saveApiKey);
+
+    // 테마 토글
+    themeToggle.addEventListener('click', toggleTheme);
+
+    // 새로고침
+    refreshBtn.addEventListener('click', handleRefresh);
+
+    // 공유
+    shareBtn.addEventListener('click', handleShare);
+
+    // 알림
+    notifyBtn.addEventListener('click', toggleNotify);
+}
+
+// 테마 관련
+function loadTheme() {
+    const theme = localStorage.getItem('subwayTimer_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', theme);
+}
+
+function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('subwayTimer_theme', next);
+}
+
+// 새로고침
+function handleRefresh() {
+    if (!currentStation) return;
+
+    refreshBtn.classList.add('spinning');
+    fetchArrivalInfo(currentStation).finally(() => {
+        setTimeout(() => refreshBtn.classList.remove('spinning'), 500);
+    });
+}
+
+// 공유
+async function handleShare() {
+    if (!currentStation) return;
+
+    const url = new URL(window.location.href);
+    url.searchParams.set('station', currentStation.name);
+    url.searchParams.set('line', currentStation.line);
+    url.searchParams.set('dir', currentDirection);
+
+    const shareUrl = url.toString();
+
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: `${currentStation.name}역 지하철 도착 정보`,
+                url: shareUrl
+            });
+        } catch (e) {
+            // 사용자가 취소한 경우
+        }
+    } else {
+        // 클립보드에 복사
+        await navigator.clipboard.writeText(shareUrl);
+        showToast('링크가 복사되었습니다');
+    }
+}
+
+// URL 업데이트
+function updateUrl() {
+    if (!currentStation) return;
+
+    const url = new URL(window.location.href);
+    url.searchParams.set('station', currentStation.name);
+    url.searchParams.set('line', currentStation.line);
+    url.searchParams.set('dir', currentDirection);
+
+    window.history.replaceState({}, '', url.toString());
+}
+
+// 알림 토글
+async function toggleNotify() {
+    if (!notifyEnabled) {
+        // 알림 권한 요청
+        if ('Notification' in window) {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                notifyEnabled = true;
+                notifyBtn.classList.add('active');
+                localStorage.setItem('subwayTimer_notify', 'true');
+                showToast('도착 1분 전에 알림을 보내드립니다');
+            } else {
+                showToast('알림 권한이 필요합니다');
+            }
+        }
+    } else {
+        notifyEnabled = false;
+        notifyBtn.classList.remove('active');
+        localStorage.setItem('subwayTimer_notify', 'false');
+        showToast('알림이 해제되었습니다');
+    }
+}
+
+function loadNotifySettings() {
+    notifyEnabled = localStorage.getItem('subwayTimer_notify') === 'true';
+    if (notifyEnabled && 'Notification' in window && Notification.permission === 'granted') {
+        notifyBtn.classList.add('active');
+    } else {
+        notifyEnabled = false;
+    }
+}
+
+function sendNotification(message) {
+    if (notifyEnabled && 'Notification' in window && Notification.permission === 'granted') {
+        new Notification('지하철 도착 알림', {
+            body: message,
+            icon: 'icons/icon.svg',
+            tag: 'subway-arrival'
+        });
+    }
+}
+
+// 토스트 메시지
+function showToast(message) {
+    toast.textContent = message;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2500);
+}
+
+// 혼잡도 계산 (시간대 기반 통계)
+function updateCongestion() {
+    const hour = new Date().getHours();
+    const day = new Date().getDay();
+    const isWeekend = day === 0 || day === 6;
+
+    let level, text;
+
+    if (isWeekend) {
+        // 주말
+        if (hour >= 12 && hour <= 18) {
+            level = 'medium';
+            text = '보통';
+        } else {
+            level = 'low';
+            text = '여유';
+        }
+    } else {
+        // 평일
+        if ((hour >= 7 && hour <= 9) || (hour >= 18 && hour <= 20)) {
+            level = 'very-high';
+            text = '매우혼잡';
+        } else if ((hour >= 6 && hour < 7) || (hour > 9 && hour <= 10) ||
+                   (hour >= 17 && hour < 18) || (hour > 20 && hour <= 21)) {
+            level = 'high';
+            text = '혼잡';
+        } else if (hour >= 10 && hour <= 17) {
+            level = 'medium';
+            text = '보통';
+        } else {
+            level = 'low';
+            text = '여유';
+        }
+    }
+
+    congestionFill.className = 'congestion-fill ' + level;
+    congestionText.className = 'congestion-text ' + level;
+    congestionText.textContent = text;
+}
+
+// 마지막 업데이트 시간 표시
+function updateLastUpdateTime() {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('ko-KR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+    lastUpdate.textContent = `마지막 업데이트: ${timeStr}`;
 }
 
 // 검색 입력 처리
@@ -102,7 +315,6 @@ function renderSuggestions(results) {
         </div>
     `).join('');
 
-    // 클릭 이벤트 추가
     suggestions.querySelectorAll('.suggestion-item').forEach(item => {
         item.addEventListener('click', () => {
             selectStation({
@@ -128,6 +340,12 @@ function selectStation(station) {
     // 즐겨찾기 상태 업데이트
     updateFavoriteButton();
 
+    // 혼잡도 업데이트
+    updateCongestion();
+
+    // URL 업데이트
+    updateUrl();
+
     // 도착 정보 가져오기
     fetchArrivalInfo(station);
 
@@ -135,7 +353,7 @@ function selectStation(station) {
     if (refreshInterval) clearInterval(refreshInterval);
     refreshInterval = setInterval(() => {
         fetchArrivalInfo(station);
-    }, 30000); // 30초마다 새로고침
+    }, 30000);
 }
 
 // 도착 정보 가져오기
@@ -149,7 +367,6 @@ async function fetchArrivalInfo(station) {
     showLoading();
 
     try {
-        // 서울시 열린데이터광장 API
         const url = `http://swopenapi.seoul.go.kr/api/subway/${apiKey}/json/realtimeStationArrival/0/10/${encodeURIComponent(station.name)}`;
 
         const response = await fetch(url);
@@ -171,12 +388,12 @@ async function fetchArrivalInfo(station) {
 
         const arrivals = data.realtimeArrivalList || [];
         lastFetchTime = Date.now();
+        updateLastUpdateTime();
         renderArrivals(arrivals, station.line);
         startCountdown();
 
     } catch (error) {
         console.error('API 호출 실패:', error);
-        // CORS 에러 등의 경우 데모 모드 안내
         showDemoMode(station);
     }
 }
@@ -184,15 +401,15 @@ async function fetchArrivalInfo(station) {
 // 데모 모드 표시
 function showDemoMode(station) {
     lastFetchTime = Date.now();
+    updateLastUpdateTime();
 
-    // 데모 데이터 생성
     const destinations = currentDirection === 'up'
         ? ['서울역행', '청량리행', '의정부행']
         : ['인천행', '신도림행', '구로행'];
 
     arrivalData = [
         { seconds: 45, destination: destinations[0], status: '전역 출발' },
-        { seconds: 180, destination: destinations[1], status: '2역 전 (잠실)' },
+        { seconds: 180, destination: destinations[1], status: '2역 전' },
         { seconds: 420, destination: destinations[2], status: '4역 전' },
     ];
 
@@ -206,16 +423,26 @@ function startCountdown() {
         clearInterval(countdownInterval);
     }
 
+    let notified = new Set();
+
     countdownInterval = setInterval(() => {
         const elapsed = Math.floor((Date.now() - lastFetchTime) / 1000);
 
         arrivalData = arrivalData.map(item => ({
             ...item,
             currentSeconds: Math.max(0, item.seconds - elapsed)
-        })).filter(item => item.currentSeconds > -30); // 지나간 열차는 30초 후 제거
+        })).filter(item => item.currentSeconds > -30);
+
+        // 알림 체크
+        arrivalData.forEach((item, index) => {
+            const sec = item.currentSeconds ?? item.seconds;
+            if (sec <= notifyThreshold && sec > 0 && !notified.has(index)) {
+                notified.add(index);
+                sendNotification(`${item.destination} 열차가 약 1분 후 도착합니다`);
+            }
+        });
 
         if (arrivalData.length === 0) {
-            // 데이터가 없으면 새로고침
             if (currentStation) {
                 fetchArrivalInfo(currentStation);
             }
@@ -283,7 +510,6 @@ function formatTime(seconds) {
 
 // 도착 정보 렌더링 (API 응답 처리)
 function renderArrivals(arrivals, selectedLine) {
-    // 방향 필터링
     const filtered = arrivals.filter(arrival => {
         const isMatchingDirection = arrival.updnLine.includes(currentDirection === 'up' ? '상행' : '하행') ||
                                     arrival.updnLine.includes(currentDirection === 'up' ? '내선' : '외선');
@@ -295,7 +521,6 @@ function renderArrivals(arrivals, selectedLine) {
         return;
     }
 
-    // 도착 데이터 변환
     arrivalData = filtered.slice(0, 3).map(arrival => ({
         seconds: parseInt(arrival.barvlDt) || 0,
         destination: arrival.trainLineNm || (arrival.bstatnNm + '행'),
@@ -342,8 +567,10 @@ function toggleFavorite() {
 
     if (index >= 0) {
         favorites.splice(index, 1);
+        showToast('즐겨찾기에서 삭제되었습니다');
     } else {
         favorites.push(currentStation);
+        showToast('즐겨찾기에 추가되었습니다');
     }
 
     saveFavorites();
@@ -380,18 +607,15 @@ function renderFavorites() {
         </div>
     `).join('');
 
-    // 클릭 이벤트 추가
     favoritesList.querySelectorAll('.favorite-chip').forEach(chip => {
         chip.addEventListener('click', (e) => {
             if (e.target.classList.contains('favorite-chip-remove')) {
-                // 삭제 버튼 클릭
                 const station = {
                     name: e.target.dataset.station,
                     line: e.target.dataset.line
                 };
                 removeFavorite(station);
             } else {
-                // 칩 클릭 - 역 선택
                 selectStation({
                     name: chip.dataset.station,
                     line: chip.dataset.line
@@ -408,6 +632,7 @@ function removeFavorite(station) {
     saveFavorites();
     updateFavoriteButton();
     renderFavorites();
+    showToast('즐겨찾기에서 삭제되었습니다');
 }
 
 // 즐겨찾기 저장
@@ -430,6 +655,7 @@ function saveApiKey() {
     apiKey = apiKeyInput.value.trim();
     localStorage.setItem('subwayTimer_apiKey', apiKey);
     apiKeyInput.value = '';
+    showToast('API 키가 저장되었습니다');
 
     if (currentStation) {
         fetchArrivalInfo(currentStation);
