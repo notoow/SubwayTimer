@@ -707,17 +707,16 @@ function renderArrivals(arrivals, selectedLine) {
     const now = Date.now();
 
     arrivalData = filtered.slice(0, 3).map(arrival => {
+        // barvlDt: 열차 도착 예정 시간 (초)
         let seconds = parseInt(arrival.barvlDt) || 0;
 
-        // recptnDt 기반 시간 보정 (API 문서 권장사항)
-        // 데이터 생성 시각과 현재 시각의 차이만큼 빼줌
-        if (arrival.recptnDt) {
-            const recptnTime = new Date(arrival.recptnDt).getTime();
-            const timeDiff = Math.floor((now - recptnTime) / 1000);
-            if (timeDiff > 0 && timeDiff < 300) { // 5분 이내만 보정
-                seconds = Math.max(0, seconds - timeDiff);
-            }
-        }
+        // 디버깅용 로그
+        console.log('열차 정보:', {
+            destination: arrival.trainLineNm,
+            barvlDt: arrival.barvlDt,
+            seconds,
+            status: arrival.arvlMsg2
+        });
 
         return {
             seconds,
