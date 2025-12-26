@@ -58,6 +58,13 @@
                     <h2 id="stationName" class="station-name"></h2>
                 </div>
                 <div class="station-actions">
+                    <button id="displayModeBtn" class="icon-btn" title="전광판 모드">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                            <line x1="8" y1="21" x2="16" y2="21"/>
+                            <line x1="12" y1="17" x2="12" y2="21"/>
+                        </svg>
+                    </button>
                     <button id="shareBtn" class="icon-btn" title="공유">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
@@ -137,6 +144,40 @@
     </div>
 
     <div id="toast" class="toast"></div>
+
+    <!-- 전광판 모드 -->
+    <div id="displayMode" class="display-mode hidden">
+        <button id="exitDisplayMode" class="exit-display-btn">&times;</button>
+        <div class="display-station">
+            <span id="displayLine" class="display-line"></span>
+            <span id="displayStationName" class="display-station-name"></span>
+            <span id="displayDirection" class="display-direction"></span>
+        </div>
+        <div class="display-timer">
+            <div class="segment-display">
+                <span id="displayMinutes" class="segment-digits">00</span>
+                <span class="segment-colon">:</span>
+                <span id="displaySeconds" class="segment-digits">00</span>
+            </div>
+            <div id="displayDestination" class="display-destination"></div>
+        </div>
+        <div class="display-next">
+            <div class="next-trains">
+                <div class="next-train" id="nextTrain1">
+                    <span class="next-label">다음</span>
+                    <span class="next-time">--:--</span>
+                </div>
+                <div class="next-train" id="nextTrain2">
+                    <span class="next-label">그 다음</span>
+                    <span class="next-time">--:--</span>
+                </div>
+            </div>
+        </div>
+        <div id="displayCongestion" class="display-congestion">
+            <span class="congestion-dot"></span>
+            <span class="congestion-label">여유</span>
+        </div>
+    </div>
 
     <script src="stations.js"></script>
     <script src="app.js"></script>
