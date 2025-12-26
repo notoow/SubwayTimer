@@ -13,9 +13,9 @@ let walkingTimes = {}; // 역별 도보 시간 저장
 let currentWalkingTime = 0; // 현재 선택된 역의 도보 시간 (분)
 let leaveNotified = false; // 출발 알림 발송 여부
 
-// Cloudflare Worker URL (선택사항 - 배포 후 이 값을 설정하면 더 안정적)
-// 예: 'https://subway-api.your-account.workers.dev'
-let workerUrl = localStorage.getItem('subwayTimer_workerUrl') || '';
+// Cloudflare Worker URL (API 프록시)
+const WORKER_URL = 'https://subway-timer.antcow0706.workers.dev';
+let workerUrl = localStorage.getItem('subwayTimer_workerUrl') || WORKER_URL;
 
 // DOM 요소
 const stationInput = document.getElementById('stationInput');
