@@ -1,10 +1,10 @@
-const CACHE_NAME = 'subway-timer-v16';
+const CACHE_NAME = 'subway-timer-v17';
 const urlsToCache = [
   '/SubwayTimer/',
   '/SubwayTimer/index.html',
   '/SubwayTimer/style.css',
-  '/SubwayTimer/app.js?v=16',
-  '/SubwayTimer/stations.js?v=16',
+  '/SubwayTimer/app.js?v=17',
+  '/SubwayTimer/stations.js?v=17',
   '/SubwayTimer/manifest.json'
 ];
 
