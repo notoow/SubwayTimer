@@ -604,6 +604,11 @@ body {
     font-size: 16px;
 }
 
+.arrival-item.departing .time-value {
+    color: var(--text-secondary);
+    font-size: 16px;
+}
+
 /* 행선지별 그룹 */
 .destination-group {
     background: var(--bg-tertiary);

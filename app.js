@@ -3,7 +3,7 @@ let currentStation = null;
 let currentDirection = 'up';
 let favorites = [];
 let apiKey = '585858626a74616e38375961745252'; // Seoul Open Data API Key (실시간 지하철 전용)
-let forceDemoMode = true; // 임시 데모 모드 (API 초과시 true로 설정)
+let forceDemoMode = false; // 임시 데모 모드 (API 초과시 true로 설정)
 let refreshInterval = null;
 let countdownInterval = null;
 let arrivalData = [];
@@ -454,18 +454,11 @@ async function fetchArrivalInfo(station) {
 
         // 도착정보 처리
         let arrivals = [];
-        console.log('도착정보 API 결과:', arrivalResult);
         if (arrivalResult.status === 'fulfilled') {
             const data = arrivalResult.value;
-            console.log('도착정보 데이터:', data);
             if (data.realtimeArrivalList && Array.isArray(data.realtimeArrivalList)) {
                 arrivals = data.realtimeArrivalList;
-                console.log('도착 열차 수:', arrivals.length);
-            } else {
-                console.log('realtimeArrivalList 없음. 키:', Object.keys(data));
             }
-        } else {
-            console.error('도착정보 API 실패:', arrivalResult.reason);
         }
 
         // 열차 위치 처리
@@ -473,7 +466,6 @@ async function fetchArrivalInfo(station) {
             const posData = positionResult.value;
             if (posData.realtimePositionList && Array.isArray(posData.realtimePositionList)) {
                 trainPositions = posData.realtimePositionList;
-                console.log('열차 위치:', trainPositions.length + '대 운행 중');
             }
         }
 
@@ -737,7 +729,7 @@ function formatTime(seconds) {
         } else {
             return {
                 html: '<span class="time-value">출발</span>',
-                className: 'departing' // CSS class needs to be added/checked
+                className: 'departing'
             };
         }
     }
@@ -780,12 +772,6 @@ const lineToSubwayId = {
 
 // 도착 정보 렌더링 (API 응답 처리)
 function renderArrivals(arrivals) {
-    // 디버깅: 모든 열차의 방향 정보 확인
-    console.log('=== 도착 정보 ===');
-    arrivals.forEach(a => {
-        console.log(`${a.bstatnNm || a.trainLineNm} | 방향: ${a.updnLine} | 호선: ${a.subwayId} | 도착: ${a.barvlDt} 초`);
-    });
-
     // 선택한 호선의 subwayId
     const targetSubwayId = currentStation ? lineToSubwayId[currentStation.line] : null;
 
@@ -813,8 +799,6 @@ function renderArrivals(arrivals) {
             return isDown;
         }
     });
-
-    console.log(`필터링 결과: ${filtered.length} 개(${currentDirection})`);
 
     if (filtered.length === 0) {
         showNoData();
@@ -1336,6 +1320,15 @@ function updateDisplayWalkingInfo(trainSeconds) {
 
 // 다음 열차까지 남은 시간 (초) 반환
 function getNextTrainSeconds() {
+    // 그룹 구조 (API 모드): arrivalData[0].trains 배열에서 두 번째 열차
+    if (arrivalData.length > 0 && arrivalData[0].trains) {
+        // 모든 그룹의 열차를 시간순으로 정렬해서 두 번째 열차 찾기
+        const allTrains = arrivalData.flatMap(group => group.trains);
+        allTrains.sort((a, b) => (a.currentSeconds ?? a.seconds) - (b.currentSeconds ?? b.seconds));
+        if (allTrains.length < 2) return null;
+        return allTrains[1].currentSeconds ?? allTrains[1].seconds;
+    }
+    // flat 구조 (데모 모드): 배열에서 직접 두 번째 열차
     if (arrivalData.length < 2) return null;
     const nextTrain = arrivalData[1];
     return nextTrain.currentSeconds ?? nextTrain.seconds;
