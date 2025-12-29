@@ -51,7 +51,7 @@ const displayColon = document.getElementById('displayColon');
 const displayArriving = document.getElementById('displayArriving');
 const segmentDisplay = document.querySelector('.segment-display');
 const displayDestination = document.getElementById('displayDestination');
-const displayCongestion = document.getElementById('displayCongestion');
+const displayCongestionDot = document.getElementById('displayCongestionDot');
 const nextTrain1 = document.getElementById('nextTrain1');
 const nextTrain2 = document.getElementById('nextTrain2');
 const walkingMinus = document.getElementById('walkingMinus');
@@ -1327,42 +1327,30 @@ function updateDisplayWalkingInfo(trainSeconds) {
 }
 
 function updateDisplayCongestion() {
+    if (!displayCongestionDot) return;
+
     const hour = new Date().getHours();
     const day = new Date().getDay();
     const isWeekend = day === 0 || day === 6;
 
-    let level, text;
+    let level;
 
     if (isWeekend) {
-        if (hour >= 12 && hour <= 18) {
-            level = 'medium';
-            text = '보통';
-        } else {
-            level = 'low';
-            text = '여유';
-        }
+        level = (hour >= 12 && hour <= 18) ? 'medium' : '';
     } else {
         if ((hour >= 7 && hour <= 9) || (hour >= 18 && hour <= 20)) {
             level = 'very-high';
-            text = '매우혼잡';
         } else if ((hour >= 6 && hour < 7) || (hour > 9 && hour <= 10) ||
             (hour >= 17 && hour < 18) || (hour > 20 && hour <= 21)) {
             level = 'high';
-            text = '혼잡';
         } else if (hour >= 10 && hour <= 17) {
             level = 'medium';
-            text = '보통';
         } else {
-            level = 'low';
-            text = '여유';
+            level = '';
         }
     }
 
-    const dot = displayCongestion.querySelector('.congestion-dot');
-    const label = displayCongestion.querySelector('.congestion-label');
-
-    dot.className = 'congestion-dot ' + level;
-    label.textContent = text;
+    displayCongestionDot.className = 'display-congestion-dot' + (level ? ' ' + level : '');
 }
 
 function toggleFullscreen() {

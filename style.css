@@ -1095,6 +1095,28 @@ body {
     border-radius: 20px;
 }
 
+.display-congestion-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #22C55E;
+    margin-left: 8px;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.display-congestion-dot.medium {
+    background: #F59E0B;
+}
+
+.display-congestion-dot.high {
+    background: #EF4444;
+}
+
+.display-congestion-dot.very-high {
+    background: #DC2626;
+    animation: pulse-fast 0.5s ease-in-out infinite;
+}
+
 /* 세그먼트 디스플레이 */
 .display-timer {
     text-align: center;
@@ -1207,46 +1229,11 @@ body {
     text-shadow: none;
 }
 
-/* 혼잡도 표시 */
-.display-congestion {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 24px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 30px;
-    border: 1px solid #333;
-}
-
-.display-congestion .congestion-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: #22C55E;
-    animation: pulse 2s ease-in-out infinite;
-}
-
-.display-congestion .congestion-dot.medium {
-    background: #F59E0B;
-}
-
-.display-congestion .congestion-dot.high {
-    background: #EF4444;
-}
-
-.display-congestion .congestion-dot.very-high {
-    background: #DC2626;
-    animation: pulse-fast 0.5s ease-in-out infinite;
-}
-
 @keyframes pulse {
-
-    0%,
-    100% {
+    0%, 100% {
         opacity: 1;
         transform: scale(1);
     }
-
     50% {
         opacity: 0.7;
         transform: scale(1.1);
@@ -1254,20 +1241,12 @@ body {
 }
 
 @keyframes pulse-fast {
-
-    0%,
-    100% {
+    0%, 100% {
         opacity: 1;
     }
-
     50% {
         opacity: 0.5;
     }
-}
-
-.display-congestion .congestion-label {
-    font-size: 16px;
-    color: #888;
 }
 
 /* 임박 상태 */
