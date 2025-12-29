@@ -1084,14 +1084,14 @@ body {
 .display-station-name {
     font-size: 36px;
     font-weight: 700;
-    color: #fff;
+    color: #555;
 }
 
 .display-direction {
     font-size: 20px;
-    color: #888;
+    color: #444;
     padding: 6px 16px;
-    border: 1px solid #444;
+    border: 1px solid #333;
     border-radius: 20px;
 }
 
@@ -1153,7 +1153,7 @@ body {
 
 .display-destination {
     font-size: 28px;
-    color: #fff;
+    color: #666;
     letter-spacing: 2px;
 }
 
@@ -1190,21 +1190,21 @@ body {
     align-items: center;
     gap: 8px;
     padding: 16px 32px;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.02);
     border-radius: 12px;
-    border: 1px solid #333;
+    border: 1px solid #222;
 }
 
 .next-train .next-label {
     font-size: 14px;
-    color: #888;
+    color: #444;
 }
 
 .next-train .next-time {
     font-family: 'DSEG', 'Courier New', monospace;
     font-size: 32px;
-    color: #4ade80;
-    text-shadow: 0 0 8px rgba(74, 222, 128, 0.4);
+    color: #2a6e40;
+    text-shadow: none;
 }
 
 /* 혼잡도 표시 */
