@@ -1383,10 +1383,6 @@ body {
 
 /* 전광판 모드 도보 시간 정보 */
 .display-walking-info {
-    position: absolute;
-    bottom: 140px;
-    left: 50%;
-    transform: translateX(-50%);
     display: flex;
     align-items: center;
     gap: 16px;
@@ -1394,6 +1390,7 @@ body {
     background: rgba(255, 255, 255, 0.05);
     border-radius: 30px;
     border: 1px solid #333;
+    margin-top: 20px;
 }
 
 .display-walking-info.hidden {
@@ -1430,10 +1427,6 @@ body {
 
 /* 전광판 모드 출발 알림 */
 .display-leave-alert {
-    position: absolute;
-    bottom: 70px;
-    left: 50%;
-    transform: translateX(-50%);
     display: flex;
     align-items: center;
     gap: 12px;
@@ -1442,6 +1435,7 @@ body {
     border-radius: 40px;
     border: 2px solid #ef4444;
     animation: display-leave-pulse 1s ease-in-out infinite;
+    margin-top: 16px;
 }
 
 .display-leave-alert.hidden {
@@ -1465,21 +1459,21 @@ body {
 
     0%,
     100% {
-        transform: translateX(-50%) scale(1);
+        transform: scale(1);
         box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
     }
 
     50% {
-        transform: translateX(-50%) scale(1.02);
+        transform: scale(1.02);
         box-shadow: 0 0 40px rgba(239, 68, 68, 0.8);
     }
 }
 
 @media (max-width: 600px) {
     .display-walking-info {
-        bottom: 110px;
         padding: 10px 20px;
         gap: 12px;
+        margin-top: 16px;
     }
 
     .display-walking-info .walking-value {
@@ -1492,8 +1486,8 @@ body {
     }
 
     .display-leave-alert {
-        bottom: 50px;
         padding: 12px 24px;
+        margin-top: 12px;
     }
 
     .display-leave-alert .leave-text {
