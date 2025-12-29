@@ -10,7 +10,8 @@ let notifyEnabled = false;
 let notifyThreshold = 60; // 1遺????뚮┝
 let walkingTimes = {}; // ??퀎 ?꾨낫 ?쒓컙 ???let currentWalkingTime = 0; // ?꾩옱 ?좏깮????쓽 ?꾨낫 ?쒓컙 (遺?
 let leaveNotified = false; // 異쒕컻 ?뚮┝ 諛쒖넚 ?щ?
-let targetDestination = null; // ?뚮┝ ????됱꽑吏 (null?대㈃ 媛??鍮⑤━ ?ㅻ뒗 ?댁감)
+        // 방향 변경 시 행선지 선택 초기화
+        targetDestination = null;
 
 // Cloudflare Worker URL (API ?꾨줉??
 const WORKER_URL = 'https://subway-timer.antcow0706.workers.dev';
@@ -126,13 +127,15 @@ function setupEventListeners() {
         }
     });
 
-    // 諛⑺뼢 ??    directionTabs.forEach(tab => {
+    // 방향 탭
+    directionTabs.forEach(tab => {
     tab.addEventListener('click', () => {
         currentDirection = tab.dataset.direction;
         directionTabs.forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
 
-        // 諛⑺뼢 蹂寃????됱꽑吏 ?좏깮 珥덇린??            targetDestination = null;
+        // 방향 변경 시 행선지 선택 초기화
+        targetDestination = null;
         lastRenderedData = null;
 
         if (currentStation) {
@@ -377,7 +380,8 @@ function selectStation(station) {
     stationInput.value = station.name;
     suggestions.classList.remove('active');
 
-    // ?됱꽑吏 ?좏깮 珥덇린??    targetDestination = null;
+        // 방향 변경 시 행선지 선택 초기화
+        targetDestination = null;
     lastRenderedData = null;
 
     // UI ?낅뜲?댄듃
