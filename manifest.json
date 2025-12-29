@@ -1,18 +1,35 @@
 {
-  "name": "지하철 타이머",
-  "short_name": "지하철",
-  "description": "서울 지하철 실시간 도착 정보",
-  "start_url": "/SubwayTimer/",
+  "name": "지하철 타이머 - 서울 지하철 실시간 도착 정보",
+  "short_name": "지하철타이머",
+  "description": "서울 지하철 실시간 도착 정보를 초 단위로 확인. 역까지 도보 시간 설정, 출발 알림, 전광판 모드 지원.",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#1a1a1a",
-  "theme_color": "#00A84D",
+  "background_color": "#0a0a0a",
+  "theme_color": "#ff6b35",
   "orientation": "portrait",
+  "lang": "ko",
+  "categories": ["utilities", "navigation"],
   "icons": [
     {
       "src": "icons/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "icons/og-image.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "label": "지하철 타이머 메인 화면"
     }
   ]
 }

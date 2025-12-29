@@ -1,0 +1,9 @@
+# SubwayTimer robots.txt
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://subwaytimer-731.pages.dev/sitemap.xml
+
+# Crawl-delay (optional, for polite crawling)
+Crawl-delay: 1
