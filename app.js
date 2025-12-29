@@ -505,58 +505,58 @@ const lineDestinations = {
     'GTX-A': { up: ['수서행'], down: ['동탄행'] }
 };
 
-                                                                    // ?곕え 紐⑤뱶 ?쒖떆
-                                                                    function showDemoMode(station) {
-                                                                        lastFetchTime = Date.now();
-                                                                        updateLastUpdateTime();
+// ?곕え 紐⑤뱶 ?쒖떆
+function showDemoMode(station) {
+    lastFetchTime = Date.now();
+    updateLastUpdateTime();
 
-                                                                        const line = station.line || '2';
-                                                                        const lineData = lineDestinations[line] || lineDestinations['2'];
-                                                                        const destinations = currentDirection === 'up' ? lineData.up : lineData.down;
+    const line = station.line || '2';
+    const lineData = lineDestinations[line] || lineDestinations['2'];
+    const destinations = currentDirection === 'up' ? lineData.up : lineData.down;
 
-                                                                        // ?됱꽑吏媛 遺議깊븯硫??쒗솚?댁꽌 ?ъ슜
-                                                                        const getDest = (i) => destinations[i % destinations.length];
+    // ?됱꽑吏媛 遺議깊븯硫??쒗솚?댁꽌 ?ъ슜
+    const getDest = (i) => destinations[i % destinations.length];
 
-                                                                        arrivalData = [
-                                                                            { seconds: 45, destination: getDest(0), status: '?꾩뿭 異쒕컻' },
+    arrivalData = [
+        { seconds: 45, destination: getDest(0), status: '?꾩뿭 異쒕컻' },
         { seconds: 180, destination: getDest(1), status: '2분 전' },
         { seconds: 420, destination: getDest(2), status: '4분 전' },
     ];
 
-                                                                        renderArrivalItems();
-                                                                        startCountdown();
-                                                                    }
+    renderArrivalItems();
+    startCountdown();
+}
 
 // 移댁슫?몃떎???쒖옉
 function startCountdown() {
-                                                                        if (countdownInterval) {
-                                                                            clearInterval(countdownInterval);
-                                                                        }
+    if (countdownInterval) {
+        clearInterval(countdownInterval);
+    }
 
-                                                                        let notified = new Set();
+    let notified = new Set();
 
-                                                                        countdownInterval = setInterval(() => {
-                                                                            const elapsed = Math.floor((Date.now() - lastFetchTime) / 1000);
+    countdownInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - lastFetchTime) / 1000);
 
-                                                                            // arrivalData媛 洹몃９ 援ъ“?몄? ?뺤씤
-                                                                            const isGrouped = arrivalData.length > 0 && arrivalData[0].trains;
+        // arrivalData媛 洹몃９ 援ъ“?몄? ?뺤씤
+        const isGrouped = arrivalData.length > 0 && arrivalData[0].trains;
 
-                                                                            if (isGrouped) {
-                                                                                // 洹몃９ 援ъ“: 媛?洹몃９???댁감???쒓컙 ?낅뜲?댄듃
-                                                                                arrivalData = arrivalData.map(group => ({
-                                                                                    ...group,
-                                                                                    trains: group.trains.map(train => ({
-                                                                                        ...train,
-                                                                                        currentSeconds: train.seconds - elapsed
-                                                                                    })).filter(train => train.currentSeconds > -30)
-                                                                                })).filter(group => group.trains.length > 0);
+        if (isGrouped) {
+            // 洹몃９ 援ъ“: 媛?洹몃９???댁감???쒓컙 ?낅뜲?댄듃
+            arrivalData = arrivalData.map(group => ({
+                ...group,
+                trains: group.trains.map(train => ({
+                    ...train,
+                    currentSeconds: train.seconds - elapsed
+                })).filter(train => train.currentSeconds > -30)
+            })).filter(group => group.trains.length > 0);
 
-                                                                                // ?뚮┝ 泥댄겕 (?좏깮???됱꽑吏 ?먮뒗 媛??鍮좊Ⅸ ?댁감)
-                                                                                const target = getTargetTrain();
-                                                                                if (target) {
-                                                                                    const sec = target.train.currentSeconds ?? target.train.seconds;
-                                                                                    if (sec <= notifyThreshold && sec > 0 && !notified.has(target.destination)) {
-                                                                                        notified.add(target.destination);
+            // ?뚮┝ 泥댄겕 (?좏깮???됱꽑吏 ?먮뒗 媛??鍮좊Ⅸ ?댁감)
+            const target = getTargetTrain();
+            if (target) {
+                const sec = target.train.currentSeconds ?? target.train.seconds;
+                if (sec <= notifyThreshold && sec > 0 && !notified.has(target.destination)) {
+                    notified.add(target.destination);
                     sendNotification(`${target.destination} 열차가 약 1분 후 도착합니다.`);
                 }
             }
@@ -573,77 +573,77 @@ function startCountdown() {
                 if (sec <= notifyThreshold && sec > 0 && !notified.has('first')) {
                     notified.add('first');
                     sendNotification(`${target.destination} 열차가 약 1분 후 도착합니다.`);
-                                                                                    }
-                                                                                }
-                                                                            }
+                }
+            }
+        }
 
-                                                                            if (arrivalData.length === 0) {
-                                                                                if (currentStation) {
-                                                                                    fetchArrivalInfo(currentStation);
-                                                                                }
-                                                                                return;
-                                                                            }
+        if (arrivalData.length === 0) {
+            if (currentStation) {
+                fetchArrivalInfo(currentStation);
+            }
+            return;
+        }
 
-                                                                            renderArrivalItems();
+        renderArrivalItems();
 
-                                                                            // 異쒕컻 ?뚮┝ ?낅뜲?댄듃
-                                                                            updateLeaveAlert();
-                                                                        }, 1000);
-                                                                    }
+        // 異쒕컻 ?뚮┝ ?낅뜲?댄듃
+        updateLeaveAlert();
+    }, 1000);
+}
 
 // ?뚮뜑留??곹깭 異붿쟻 (源쒕묀嫄곕┝ 諛⑹?)
 let lastRenderedData = null;
 
-                                                                    // ?꾩갑 ?뺣낫 ??ぉ ?뚮뜑留?(?됱꽑吏蹂?洹몃９)
-                                                                    function renderArrivalItems() {
-                                                                        const lineColor = currentStation ? getLineColor(currentStation.line) : '#00A84D';
+// ?꾩갑 ?뺣낫 ??ぉ ?뚮뜑留?(?됱꽑吏蹂?洹몃９)
+function renderArrivalItems() {
+    const lineColor = currentStation ? getLineColor(currentStation.line) : '#00A84D';
 
-                                                                        // arrivalData媛 洹몃９ 援ъ“?몄? ?뺤씤
-                                                                        const isGrouped = arrivalData.length > 0 && arrivalData[0].trains;
+    // arrivalData媛 洹몃９ 援ъ“?몄? ?뺤씤
+    const isGrouped = arrivalData.length > 0 && arrivalData[0].trains;
 
-                                                                        if (!isGrouped) {
-                                                                            // 湲곗〈 flat 援ъ“ (?곕え 紐⑤뱶 ??
-                                                                            renderFlatItems(lineColor);
-                                                                            return;
-                                                                        }
+    if (!isGrouped) {
+        // 湲곗〈 flat 援ъ“ (?곕え 紐⑤뱶 ??
+        renderFlatItems(lineColor);
+        return;
+    }
 
-                                                                        const currentDataKey = arrivalData.map(g =>
-                                                                            `${g.destination}:${g.trains.map(t => t.seconds).join(',')}`
-                                                                        ).join('|');
-                                                                        const needsFullRender = lastRenderedData !== currentDataKey;
+    const currentDataKey = arrivalData.map(g =>
+        `${g.destination}:${g.trains.map(t => t.seconds).join(',')}`
+    ).join('|');
+    const needsFullRender = lastRenderedData !== currentDataKey;
 
-                                                                        if (needsFullRender) {
-                                                                            lastRenderedData = currentDataKey;
+    if (needsFullRender) {
+        lastRenderedData = currentDataKey;
 
-                                                                            arrivalList.innerHTML = arrivalData.map((group, gIdx) => {
-                                                                                const isSelected = targetDestination === group.destination;
-                                                                                const trainsHtml = group.trains.map((train, tIdx) => {
-                                                                                    const seconds = train.currentSeconds ?? train.seconds;
-                                                                                    const timeInfo = formatTime(seconds);
+        arrivalList.innerHTML = arrivalData.map((group, gIdx) => {
+            const isSelected = targetDestination === group.destination;
+            const trainsHtml = group.trains.map((train, tIdx) => {
+                const seconds = train.currentSeconds ?? train.seconds;
+                const timeInfo = formatTime(seconds);
 
-                                                                                    let badges = '';
-                                                                                    if (train.trainType === '湲됲뻾' || train.trainType === 'ITX') {
-                                                                                        badges += `<span class="train-badge express">${train.trainType}</span>`;
-                                                                                    }
-                                                                                    if (train.isLast) {
-                                                                                        badges += `<span class="train-badge last">留됱감</span>`;
-                                                                                    }
+                let badges = '';
+                if (train.trainType === '湲됲뻾' || train.trainType === 'ITX') {
+                    badges += `<span class="train-badge express">${train.trainType}</span>`;
+                }
+                if (train.isLast) {
+                    badges += `<span class="train-badge last">留됱감</span>`;
+                }
 
-                                                                                    let orderLabel = (tIdx + 1).toString();
-                                                                                    if (tIdx === 0) orderLabel = '?대쾲';
-                                                                                    else if (tIdx === 1) orderLabel = '?ㅼ쓬';
-                                                                                    else if (tIdx === 2) orderLabel = '?ㅻ떎??;
+                let orderLabel = (tIdx + 1).toString();
+                if (tIdx === 0) orderLabel = '?대쾲';
+                else if (tIdx === 1) orderLabel = '?ㅼ쓬';
+                else if (tIdx === 2) orderLabel = '?ㅻ떎??;
 
-                                                                                    return `
+                return `
                     <div class="train-row ${timeInfo.className}" data-group="${gIdx}" data-train="${tIdx}">
                         <span class="train-order badge">${orderLabel}</span>
                         <span class="train-status">${train.status}${badges}</span>
                         <span class="train-time" data-time-slot="${gIdx}-${tIdx}">${timeInfo.html}</span>
                     </div>
                 `;
-                                                                                }).join('');
+            }).join('');
 
-                                                                                return `
+            return `
                 <div class="destination-group ${isSelected ? 'selected' : ''}" data-destination="${group.destination}" style="--line-color: ${lineColor}">
                     <div class="destination-header">
                         <span class="destination-indicator" style="background-color: ${lineColor}"></span>
@@ -655,51 +655,51 @@ let lastRenderedData = null;
                     </div>
                 </div>
             `;
-                                                                            }).join('');
+        }).join('');
 
-                                                                            // ?됱꽑吏 ?대┃ ?대깽??異붽?
-                                                                            arrivalList.querySelectorAll('.destination-group').forEach(group => {
-                                                                                group.addEventListener('click', () => {
-                                                                                    const dest = group.dataset.destination;
-                                                                                    selectTargetDestination(dest);
-                                                                                });
-                                                                            });
-                                                                        } else {
-                                                                            // ?쒓컙留??낅뜲?댄듃
-                                                                            arrivalData.forEach((group, gIdx) => {
-                                                                                group.trains.forEach((train, tIdx) => {
-                                                                                    const seconds = train.currentSeconds ?? train.seconds;
-                                                                                    const timeInfo = formatTime(seconds);
-                                                                                    const timeSlot = arrivalList.querySelector(`[data - time - slot="${gIdx}-${tIdx}"]`);
-                                                                                    const trainRow = arrivalList.querySelector(`[data - group= "${gIdx}"][data - train="${tIdx}"]`);
+        // ?됱꽑吏 ?대┃ ?대깽??異붽?
+        arrivalList.querySelectorAll('.destination-group').forEach(group => {
+            group.addEventListener('click', () => {
+                const dest = group.dataset.destination;
+                selectTargetDestination(dest);
+            });
+        });
+    } else {
+        // ?쒓컙留??낅뜲?댄듃
+        arrivalData.forEach((group, gIdx) => {
+            group.trains.forEach((train, tIdx) => {
+                const seconds = train.currentSeconds ?? train.seconds;
+                const timeInfo = formatTime(seconds);
+                const timeSlot = arrivalList.querySelector(`[data - time - slot="${gIdx}-${tIdx}"]`);
+                const trainRow = arrivalList.querySelector(`[data - group= "${gIdx}"][data - train="${tIdx}"]`);
 
-                                                                                    if (timeSlot) {
-                                                                                        timeSlot.innerHTML = timeInfo.html;
-                                                                                    }
-                                                                                    if (trainRow) {
-                                                                                        trainRow.className = `train - row ${timeInfo.className} `;
-                                                                                    }
-                                                                                });
-                                                                            });
-                                                                        }
-                                                                    }
+                if (timeSlot) {
+                    timeSlot.innerHTML = timeInfo.html;
+                }
+                if (trainRow) {
+                    trainRow.className = `train - row ${timeInfo.className} `;
+                }
+            });
+        });
+    }
+}
 
 // 湲곗〈 flat 援ъ“ ?뚮뜑留?(?곕え 紐⑤뱶??
 function renderFlatItems(lineColor) {
-                                                                        const items = arrivalData.slice(0, 4);
-                                                                        arrivalList.innerHTML = items.map((item, index) => {
-                                                                            const seconds = item.currentSeconds ?? item.seconds;
-                                                                            const timeInfo = formatTime(seconds);
+    const items = arrivalData.slice(0, 4);
+    arrivalList.innerHTML = items.map((item, index) => {
+        const seconds = item.currentSeconds ?? item.seconds;
+        const timeInfo = formatTime(seconds);
 
-                                                                            let badges = '';
-                                                                            if (item.trainType === '湲됲뻾' || item.trainType === 'ITX') {
-                                                                                badges += `< span class="train-badge express" > ${item.trainType}</span > `;
-                                                                            }
-                                                                            if (item.isLast) {
-                                                                                badges += `< span class="train-badge last" > 留됱감</span > `;
-                                                                            }
+        let badges = '';
+        if (item.trainType === '湲됲뻾' || item.trainType === 'ITX') {
+            badges += `< span class="train-badge express" > ${item.trainType}</span > `;
+        }
+        if (item.isLast) {
+            badges += `< span class="train-badge last" > 留됱감</span > `;
+        }
 
-                                                                            return `
+        return `
                 < div class="arrival-item ${timeInfo.className}" data - index="${index}" style = "--line-color: ${lineColor}" >
                 <span class="arrival-order" style="background-color: ${lineColor}">${index + 1}</span>
                 <div class="arrival-info">
@@ -711,67 +711,67 @@ function renderFlatItems(lineColor) {
                 </div>
             </div >
                 `;
-                                                                        }).join('');
-                                                                    }
+    }).join('');
+}
 
 // ?쒓컙 ?щ㎎
 function formatTime(seconds) {
-                                                                        if (seconds <= 0) {
-                                                                            if (seconds > -10) {
-                                                                                return {
-                                                                                    html: '<span class="time-value">?꾩갑</span>',
-                                                                                    className: 'arriving'
-                                                                                };
-                                                                            } else {
-                                                                                return {
-                                                                                    html: '<span class="time-value">異쒕컻</span>',
-                                                                                    className: 'departing' // CSS class needs to be added/checked
-                                                                                };
-                                                                            }
-                                                                        }
+    if (seconds <= 0) {
+        if (seconds > -10) {
+            return {
+                html: '<span class="time-value">?꾩갑</span>',
+                className: 'arriving'
+            };
+        } else {
+            return {
+                html: '<span class="time-value">異쒕컻</span>',
+                className: 'departing' // CSS class needs to be added/checked
+            };
+        }
+    }
 
-                                                                        if (seconds < 60) {
-                                                                            return {
-                                                                                html: `< span class="time-value" > ${seconds}</span > <span class="time-unit">珥?/span>`,
-                                                                                className: 'imminent'
-                                                                            };
-                                                                        }
+    if (seconds < 60) {
+        return {
+            html: `< span class="time-value" > ${seconds}</span > <span class="time-unit">珥?/span>`,
+            className: 'imminent'
+        };
+    }
 
-                                                                        const minutes = Math.floor(seconds / 60);
-                                                                        const secs = seconds % 60;
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
 
-                                                                        if (minutes < 3) {
-                                                                            return {
-                                                                                html: `< span class="time-value" > ${minutes}:${secs.toString().padStart(2, '0')}</span > `,
-                                                                                className: 'imminent'
-                                                                            };
-                                                                        }
+    if (minutes < 3) {
+        return {
+            html: `< span class="time-value" > ${minutes}:${secs.toString().padStart(2, '0')}</span > `,
+            className: 'imminent'
+        };
+    }
 
-                                                                        return {
-                                                                            html: `< span class="time-value" > ${minutes}</span > <span class="time-unit">遺?/span>`,
-                                                                            className: ''
-                                                                        };
-                                                                    }
+    return {
+        html: `< span class="time-value" > ${minutes}</span > <span class="time-unit">遺?/span>`,
+        className: ''
+    };
+}
 
 // ?몄꽑 肄붾뱶 ??subwayId 留ㅽ븨
 const lineToSubwayId = {
-                                                                    '1': '1001', '2': '1002', '3': '1003', '4': '1004', '5': '1005',
-                                                                    '6': '1006', '7': '1007', '8': '1008', '9': '1009',
-                                                                    '寃쎌쓽以묒븰': '1063',
-                                                                    '怨듯빆泥좊룄': '1065',
-                                                                    '寃쎌텣': '1067',
-                                                                    '?섏씤遺꾨떦': '1075',
-                                                                    '?좊텇??: '1077',
+    '1': '1001', '2': '1002', '3': '1003', '4': '1004', '5': '1005',
+    '6': '1006', '7': '1007', '8': '1008', '9': '1009',
+    '寃쎌쓽以묒븰': '1063',
+    '怨듯빆泥좊룄': '1065',
+    '寃쎌텣': '1067',
+    '?섏씤遺꾨떦': '1075',
+    '?좊텇??: '1077',
     '?곗씠?좎꽕': '1092',
-                                                                    'GTX-A': '1032',
-                                                                };
+    'GTX-A': '1032',
+};
 
-                                                                // ?꾩갑 ?뺣낫 ?뚮뜑留?(API ?묐떟 泥섎━)
-                                                                function renderArrivals(arrivals) {
-                                                                // ?붾쾭源? 紐⑤뱺 ?댁감??諛⑺뼢 ?뺣낫 ?뺤씤
-                                                                console.log('=== ?꾩갑 ?뺣낫 ===');
-                                                                arrivals.forEach(a => {
-                                                                    console.log(`${a.bstatnNm || a.trainLineNm} | 諛⑺뼢: ${a.updnLine} | ?몄꽑: ${a.subwayId} | ?꾩갑: ${a.barvlDt} 珥?);
+// ?꾩갑 ?뺣낫 ?뚮뜑留?(API ?묐떟 泥섎━)
+function renderArrivals(arrivals) {
+    // ?붾쾭源? 紐⑤뱺 ?댁감??諛⑺뼢 ?뺣낫 ?뺤씤
+    console.log('=== ?꾩갑 ?뺣낫 ===');
+    arrivals.forEach(a => {
+        console.log(`${a.bstatnNm || a.trainLineNm} | 諛⑺뼢: ${a.updnLine} | ?몄꽑: ${a.subwayId} | ?꾩갑: ${a.barvlDt} 珥?);
     });
 
     // ?좏깮???몄꽑??subwayId
@@ -879,29 +879,29 @@ const lineToSubwayId = {
 // 濡쒕뵫 ?쒖떆
 function showLoading() {
     arrivalList.innerHTML = `
-                                                                        < div class="loading" >
+            < div class="loading" >
             <div class="loading-spinner"></div>
             <span>?꾩갑 ?뺣낫瑜?遺덈윭?ㅻ뒗 以?..</span>
         </div >
-                                                                        `;
+            `;
 }
 
 // ?곗씠???놁쓬 ?쒖떆
 function showNoData() {
     arrivalList.innerHTML = `
-                                                                        < div class="no-data" >
-                                                                            <p>?꾩옱 ?꾩갑 ?덉젙 ?댁감媛 ?놁뒿?덈떎</p>
+            < div class="no-data" >
+                <p>?꾩옱 ?꾩갑 ?덉젙 ?댁감媛 ?놁뒿?덈떎</p>
         </div >
-                                                                        `;
+            `;
 }
 
 // ?먮윭 ?쒖떆
 function showError(message) {
     arrivalList.innerHTML = `
-                                                                        < div class="error" >
-                                                                            <p>${message}</p>
+            < div class="error" >
+                <p>${message}</p>
         </div >
-                                                                        `;
+            `;
 }
 
 // 利먭꺼李얘린 ?좉?
@@ -943,14 +943,14 @@ function updateFavoriteButton() {
     }
 
     favoritesList.innerHTML = favorites.map(station => `
-                                                                        < div class="favorite-chip" data - station="${station.name}" data - line="${station.line}" >
+            < div class="favorite-chip" data - station="${station.name}" data - line="${station.line}" >
             <span class="favorite-chip-line" style="background-color: ${getLineColor(station.line)}">
                 ${getLineName(station.line)}
             </span>
             <span class="favorite-chip-name">${station.name}</span>
             <button class="favorite-chip-remove" data-station="${station.name}" data-line="${station.line}">&times;</button>
         </div >
-                                                                        `).join('');
+            `).join('');
 
     favoritesList.querySelectorAll('.favorite-chip').forEach(chip => {
         chip.addEventListener('click', (e) => {
@@ -1056,422 +1056,422 @@ function selectTargetDestination(dest) {
     } else {
         targetDestination = dest;
         showToast(`${ dest } ?댁감濡 ?? 뚮┝ ?ㅼ젙 ??);
-                                                            }
+}
 
-    // 異쒕컻 ?뚮┝ 珥덇린??    leaveNotified = false;
+// 異쒕컻 ?뚮┝ 珥덇린??    leaveNotified = false;
 
-    // UI ?낅뜲?댄듃瑜??꾪빐 lastRenderedData 由ъ뀑
-    lastRenderedData = null;
-                                                            renderArrivalItems();
+// UI ?낅뜲?댄듃瑜??꾪빐 lastRenderedData 由ъ뀑
+lastRenderedData = null;
+renderArrivalItems();
 }
 
 // ?뚮┝ ????댁감 李얘린
 function getTargetTrain() {
-                                                        if (arrivalData.length === 0) return null;
+    if (arrivalData.length === 0) return null;
 
-                                                        const isGrouped = arrivalData[0].trains;
+    const isGrouped = arrivalData[0].trains;
 
-                                                        if (isGrouped) {
-                                                            // ?뱀젙 ?됱꽑吏媛 ?좏깮??寃쎌슦
-                                                            if (targetDestination) {
-                                                                const targetGroup = arrivalData.find(g => g.destination === targetDestination);
-                                                                if (targetGroup && targetGroup.trains.length > 0) {
-                                                                    return {
-                                                                        train: targetGroup.trains[0],
-                                                                        destination: targetGroup.destination
-                                                                    };
-                                                                }
-                                                            }
-                                                            // ?좏깮 ???먭굅???대떦 ?됱꽑吏媛 ?놁쑝硫?媛??鍮좊Ⅸ ?댁감
-                                                            if (arrivalData[0].trains.length > 0) {
-                                                                return {
-                                                                    train: arrivalData[0].trains[0],
-                                                                    destination: arrivalData[0].destination
-                                                                };
-                                                            }
-                                                        } else {
-                                                            // flat 援ъ“
-                                                            return {
-                                                                train: arrivalData[0],
-                                                                destination: arrivalData[0].destination
-                                                            };
-                                                        }
+    if (isGrouped) {
+        // ?뱀젙 ?됱꽑吏媛 ?좏깮??寃쎌슦
+        if (targetDestination) {
+            const targetGroup = arrivalData.find(g => g.destination === targetDestination);
+            if (targetGroup && targetGroup.trains.length > 0) {
+                return {
+                    train: targetGroup.trains[0],
+                    destination: targetGroup.destination
+                };
+            }
+        }
+        // ?좏깮 ???먭굅???대떦 ?됱꽑吏媛 ?놁쑝硫?媛??鍮좊Ⅸ ?댁감
+        if (arrivalData[0].trains.length > 0) {
+            return {
+                train: arrivalData[0].trains[0],
+                destination: arrivalData[0].destination
+            };
+        }
+    } else {
+        // flat 援ъ“
+        return {
+            train: arrivalData[0],
+            destination: arrivalData[0].destination
+        };
+    }
 
-                                                        return null;
-                                                    }
+    return null;
+}
 
 // 異쒕컻 ?뚮┝ ?낅뜲?댄듃
 function updateLeaveAlert() {
-                                                        if (!currentStation || arrivalData.length === 0 || currentWalkingTime === 0) {
-                                                            leaveAlert.classList.add('hidden');
-                                                            if (displayLeaveAlert) displayLeaveAlert.classList.add('hidden');
-                                                            return;
-                                                        }
+    if (!currentStation || arrivalData.length === 0 || currentWalkingTime === 0) {
+        leaveAlert.classList.add('hidden');
+        if (displayLeaveAlert) displayLeaveAlert.classList.add('hidden');
+        return;
+    }
 
-                                                        const target = getTargetTrain();
-                                                        if (!target) {
-                                                            leaveAlert.classList.add('hidden');
-                                                            if (displayLeaveAlert) displayLeaveAlert.classList.add('hidden');
-                                                            return;
-                                                        }
+    const target = getTargetTrain();
+    if (!target) {
+        leaveAlert.classList.add('hidden');
+        if (displayLeaveAlert) displayLeaveAlert.classList.add('hidden');
+        return;
+    }
 
-                                                        const firstTrain = target.train;
-                                                        const destination = target.destination;
+    const firstTrain = target.train;
+    const destination = target.destination;
 
-                                                        const trainSeconds = firstTrain.currentSeconds ?? firstTrain.seconds;
-                                                        const walkingSeconds = currentWalkingTime * 60;
-                                                        const bufferSeconds = 60; // 1遺??ъ쑀
+    const trainSeconds = firstTrain.currentSeconds ?? firstTrain.seconds;
+    const walkingSeconds = currentWalkingTime * 60;
+    const bufferSeconds = 60; // 1遺??ъ쑀
 
-                                                        // 異쒕컻?댁빞 ?섎뒗 ?쒓컙 = ?댁감 ?꾩갑 ?쒓컙 - ?꾨낫 ?쒓컙 - ?ъ쑀 ?쒓컙
-                                                        const leaveInSeconds = trainSeconds - walkingSeconds - bufferSeconds;
+    // 異쒕컻?댁빞 ?섎뒗 ?쒓컙 = ?댁감 ?꾩갑 ?쒓컙 - ?꾨낫 ?쒓컙 - ?ъ쑀 ?쒓컙
+    const leaveInSeconds = trainSeconds - walkingSeconds - bufferSeconds;
 
-                                                        if (leaveInSeconds <= 0) {
-                                                            // 吏湲?異쒕컻?댁빞 ??        leaveAlert.classList.remove('hidden', 'warning');
-                                                            leaveAlertText.textContent = '吏湲?異쒕컻?섏꽭??';
+    if (leaveInSeconds <= 0) {
+        // 吏湲?異쒕컻?댁빞 ??        leaveAlert.classList.remove('hidden', 'warning');
+        leaveAlertText.textContent = '吏湲?異쒕컻?섏꽭??';
 
-                                                            if (displayLeaveAlert) {
-                                                                displayLeaveAlert.classList.remove('hidden', 'warning');
-                                                                displayLeaveText.textContent = '吏湲?異쒕컻!';
-                                                            }
+        if (displayLeaveAlert) {
+            displayLeaveAlert.classList.remove('hidden', 'warning');
+            displayLeaveText.textContent = '吏湲?異쒕컻!';
+        }
 
-                                                            // ?뚮┝ 諛쒖넚 (??踰덈쭔)
-                                                            if (!leaveNotified && notifyEnabled) {
-                    sendNotification(`${first.destination} 열차가 약 1분 후 도착합니다.`);
-                                                                leaveNotified = true;
-                                                            }
-                                                        } else if (leaveInSeconds <= 180) {
-                                                            // 3遺??대궡 異쒕컻
-                                                            const mins = Math.floor(leaveInSeconds / 60);
-                                                            const secs = leaveInSeconds % 60;
+        // ?뚮┝ 諛쒖넚 (??踰덈쭔)
+        if (!leaveNotified && notifyEnabled) {
+            sendNotification(`${first.destination} 열차가 약 1분 후 도착합니다.`);
+            leaveNotified = true;
+        }
+    } else if (leaveInSeconds <= 180) {
+        // 3遺??대궡 異쒕컻
+        const mins = Math.floor(leaveInSeconds / 60);
+        const secs = leaveInSeconds % 60;
 
-                                                            leaveAlert.classList.remove('hidden');
-                                                            leaveAlert.classList.add('warning');
-                                                            leaveAlertText.textContent = `${mins}遺?${secs}珥???異쒕컻`;
+        leaveAlert.classList.remove('hidden');
+        leaveAlert.classList.add('warning');
+        leaveAlertText.textContent = `${mins}遺?${secs}珥???異쒕컻`;
 
-                                                            if (displayLeaveAlert) {
-                                                                displayLeaveAlert.classList.remove('hidden');
-                                                                displayLeaveAlert.classList.add('warning');
-                                                                displayLeaveText.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')} ??異쒕컻`;
-                                                            }
-                                                        } else {
-                                                            leaveAlert.classList.add('hidden');
-                                                            if (displayLeaveAlert) displayLeaveAlert.classList.add('hidden');
-                                                        }
-                                                    }
+        if (displayLeaveAlert) {
+            displayLeaveAlert.classList.remove('hidden');
+            displayLeaveAlert.classList.add('warning');
+            displayLeaveText.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')} ??異쒕컻`;
+        }
+    } else {
+        leaveAlert.classList.add('hidden');
+        if (displayLeaveAlert) displayLeaveAlert.classList.add('hidden');
+    }
+}
 
 // ===== ?꾧킅??紐⑤뱶 =====
 function enterDisplayMode() {
-                                                        if (!currentStation || arrivalData.length === 0) {
-                                                            showToast('癒쇱? ??쓣 ?좏깮?댁＜?몄슂');
-                                                            return;
-                                                        }
+    if (!currentStation || arrivalData.length === 0) {
+        showToast('癒쇱? ??쓣 ?좏깮?댁＜?몄슂');
+        return;
+    }
 
-                                                        isDisplayMode = true;
-                                                        displayMode.classList.remove('hidden');
-                                                        document.body.style.overflow = 'hidden';
+    isDisplayMode = true;
+    displayMode.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
 
-                                                        // ???뺣낫 ?낅뜲?댄듃
-                                                        displayLine.textContent = getLineName(currentStation.line);
-                                                        displayLine.style.backgroundColor = getLineColor(currentStation.line);
-                                                        displayStationName.textContent = currentStation.name + '??;
-                                                        displayDirection.textContent = currentDirection === 'up' ? '?곹뻾' : '?섑뻾';
+    // ???뺣낫 ?낅뜲?댄듃
+    displayLine.textContent = getLineName(currentStation.line);
+    displayLine.style.backgroundColor = getLineColor(currentStation.line);
+    displayStationName.textContent = currentStation.name + '??;
+    displayDirection.textContent = currentDirection === 'up' ? '?곹뻾' : '?섑뻾';
 
-                                                        // ?꾧킅???낅뜲?댄듃 ?쒖옉
-                                                        updateDisplayMode();
-                                                        displayInterval = setInterval(updateDisplayMode, 1000);
-                                                    }
+    // ?꾧킅???낅뜲?댄듃 ?쒖옉
+    updateDisplayMode();
+    displayInterval = setInterval(updateDisplayMode, 1000);
+}
 
 function exitDisplayModeHandler() {
-                                                        isDisplayMode = false;
-                                                        displayMode.classList.add('hidden');
-                                                        document.body.style.overflow = '';
+    isDisplayMode = false;
+    displayMode.classList.add('hidden');
+    document.body.style.overflow = '';
 
-                                                        if (displayInterval) {
-                                                            clearInterval(displayInterval);
-                                                            displayInterval = null;
-                                                        }
+    if (displayInterval) {
+        clearInterval(displayInterval);
+        displayInterval = null;
+    }
 
-                                                        // ?꾩껜?붾㈃ 醫낅즺
-                                                        if (document.fullscreenElement) {
-                                                            document.exitFullscreen();
-                                                        }
-                                                    }
+    // ?꾩껜?붾㈃ 醫낅즺
+    if (document.fullscreenElement) {
+        document.exitFullscreen();
+    }
+}
 
 function updateDisplayMode() {
-                                                        if (!isDisplayMode || arrivalData.length === 0) return;
+    if (!isDisplayMode || arrivalData.length === 0) return;
 
-                                                        // ?좏깮???됱꽑吏 ?먮뒗 媛??鍮좊Ⅸ ?댁감
-                                                        const target = getTargetTrain();
-                                                        if (!target) return;
+    // ?좏깮???됱꽑吏 ?먮뒗 媛??鍮좊Ⅸ ?댁감
+    const target = getTargetTrain();
+    if (!target) return;
 
-                                                        const seconds = target.train.currentSeconds ?? target.train.seconds;
+    const seconds = target.train.currentSeconds ?? target.train.seconds;
 
-                                                        // 硫붿씤 ??대㉧ ?낅뜲?댄듃
-                                                        const mins = Math.floor(seconds / 60);
-                                                        const secs = seconds % 60;
+    // 硫붿씤 ??대㉧ ?낅뜲?댄듃
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
 
-                                                        displayDestination.textContent = target.destination;
+    displayDestination.textContent = target.destination;
 
-                                                        // ?곹깭???곕Ⅸ ?됱긽
-                                                        displayMinutes.className = 'segment-digits';
-                                                        displaySeconds.className = 'segment-digits';
+    // ?곹깭???곕Ⅸ ?됱긽
+    displayMinutes.className = 'segment-digits';
+    displaySeconds.className = 'segment-digits';
 
-                                                        if (seconds <= 0) {
-                                                            // ?꾩갑: segment display ?④린怨?"?꾩갑" ?띿뒪???쒖떆
-                                                            segmentDisplay.classList.add('hidden');
-                                                            displayArriving.classList.remove('hidden');
-                                                        } else {
-                                                            // ?쒓컙 ?쒖떆: "?꾩갑" ?④린怨?segment display ?쒖떆
-                                                            segmentDisplay.classList.remove('hidden');
-                                                            displayArriving.classList.add('hidden');
+    if (seconds <= 0) {
+        // ?꾩갑: segment display ?④린怨?"?꾩갑" ?띿뒪???쒖떆
+        segmentDisplay.classList.add('hidden');
+        displayArriving.classList.remove('hidden');
+    } else {
+        // ?쒓컙 ?쒖떆: "?꾩갑" ?④린怨?segment display ?쒖떆
+        segmentDisplay.classList.remove('hidden');
+        displayArriving.classList.add('hidden');
 
-                                                            displayMinutes.textContent = mins.toString().padStart(2, '0');
-                                                            displaySeconds.textContent = secs.toString().padStart(2, '0');
+        displayMinutes.textContent = mins.toString().padStart(2, '0');
+        displaySeconds.textContent = secs.toString().padStart(2, '0');
 
-                                                            if (seconds < 60) {
-                                                                displayMinutes.classList.add('imminent');
-                                                                displaySeconds.classList.add('imminent');
-                                                            }
-                                                        }
+        if (seconds < 60) {
+            displayMinutes.classList.add('imminent');
+            displaySeconds.classList.add('imminent');
+        }
+    }
 
-                                                        // ?ㅼ쓬 ?댁감 ?뺣낫 (?좏깮???됱꽑吏???ㅼ쓬 ?댁감??
-                                                        const isGrouped = arrivalData[0]?.trains;
-                                                        let nextTrains = [];
+    // ?ㅼ쓬 ?댁감 ?뺣낫 (?좏깮???됱꽑吏???ㅼ쓬 ?댁감??
+    const isGrouped = arrivalData[0]?.trains;
+    let nextTrains = [];
 
-                                                        if (isGrouped && targetDestination) {
-                                                            const targetGroup = arrivalData.find(g => g.destination === targetDestination);
-                                                            if (targetGroup && targetGroup.trains.length > 1) {
-                                                                nextTrains = targetGroup.trains.slice(1, 3);
-                                                            }
-                                                        } else if (isGrouped) {
-                                                            // ?꾩껜?먯꽌 ?ㅼ쓬 ?댁감??(?ㅻⅨ ?됱꽑吏 ?ы븿)
-                                                            const allTrains = arrivalData.flatMap(g => g.trains.map(t => ({ ...t, dest: g.destination })));
-                                                            allTrains.sort((a, b) => (a.currentSeconds ?? a.seconds) - (b.currentSeconds ?? b.seconds));
-                                                            nextTrains = allTrains.slice(1, 3);
-                                                        } else {
-                                                            nextTrains = arrivalData.slice(1, 3);
-                                                        }
+    if (isGrouped && targetDestination) {
+        const targetGroup = arrivalData.find(g => g.destination === targetDestination);
+        if (targetGroup && targetGroup.trains.length > 1) {
+            nextTrains = targetGroup.trains.slice(1, 3);
+        }
+    } else if (isGrouped) {
+        // ?꾩껜?먯꽌 ?ㅼ쓬 ?댁감??(?ㅻⅨ ?됱꽑吏 ?ы븿)
+        const allTrains = arrivalData.flatMap(g => g.trains.map(t => ({ ...t, dest: g.destination })));
+        allTrains.sort((a, b) => (a.currentSeconds ?? a.seconds) - (b.currentSeconds ?? b.seconds));
+        nextTrains = allTrains.slice(1, 3);
+    } else {
+        nextTrains = arrivalData.slice(1, 3);
+    }
 
-                                                        if (nextTrains[0]) {
-                                                            const sec1 = nextTrains[0].currentSeconds ?? nextTrains[0].seconds;
-                                                            const m1 = Math.floor(sec1 / 60);
-                                                            const s1 = sec1 % 60;
-                                                            nextTrain1.querySelector('.next-time').textContent =
-                                                                sec1 <= 0 ? '?꾩갑' : `${m1.toString().padStart(2, '0')}:${s1.toString().padStart(2, '0')} `;
-                                                        } else {
-                                                            nextTrain1.querySelector('.next-time').textContent = '--:--';
-                                                        }
+    if (nextTrains[0]) {
+        const sec1 = nextTrains[0].currentSeconds ?? nextTrains[0].seconds;
+        const m1 = Math.floor(sec1 / 60);
+        const s1 = sec1 % 60;
+        nextTrain1.querySelector('.next-time').textContent =
+            sec1 <= 0 ? '?꾩갑' : `${m1.toString().padStart(2, '0')}:${s1.toString().padStart(2, '0')} `;
+    } else {
+        nextTrain1.querySelector('.next-time').textContent = '--:--';
+    }
 
-                                                        if (nextTrains[1]) {
-                                                            const sec2 = nextTrains[1].currentSeconds ?? nextTrains[1].seconds;
-                                                            const m2 = Math.floor(sec2 / 60);
-                                                            const s2 = sec2 % 60;
-                                                            nextTrain2.querySelector('.next-time').textContent =
-                                                                sec2 <= 0 ? '?꾩갑' : `${m2.toString().padStart(2, '0')}:${s2.toString().padStart(2, '0')} `;
-                                                        } else {
-                                                            nextTrain2.querySelector('.next-time').textContent = '--:--';
-                                                        }
+    if (nextTrains[1]) {
+        const sec2 = nextTrains[1].currentSeconds ?? nextTrains[1].seconds;
+        const m2 = Math.floor(sec2 / 60);
+        const s2 = sec2 % 60;
+        nextTrain2.querySelector('.next-time').textContent =
+            sec2 <= 0 ? '?꾩갑' : `${m2.toString().padStart(2, '0')}:${s2.toString().padStart(2, '0')} `;
+    } else {
+        nextTrain2.querySelector('.next-time').textContent = '--:--';
+    }
 
-                                                        // ?쇱옟???낅뜲?댄듃
-                                                        updateDisplayCongestion();
+    // ?쇱옟???낅뜲?댄듃
+    updateDisplayCongestion();
 
-                                                        // 異쒕컻 ?뚮┝ ?낅뜲?댄듃
-                                                        updateLeaveAlert();
-                                                    }
+    // 異쒕컻 ?뚮┝ ?낅뜲?댄듃
+    updateLeaveAlert();
+}
 
 function updateDisplayCongestion() {
-                                                        const hour = new Date().getHours();
-                                                        const day = new Date().getDay();
-                                                        const isWeekend = day === 0 || day === 6;
+    const hour = new Date().getHours();
+    const day = new Date().getDay();
+    const isWeekend = day === 0 || day === 6;
 
-                                                        let level, text;
+    let level, text;
 
-                                                        if (isWeekend) {
-                                                            if (hour >= 12 && hour <= 18) {
-                                                                level = 'medium';
-                                                                text = '蹂댄넻';
-                                                            } else {
-                                                                level = 'low';
-                                                                text = '?ъ쑀';
-                                                            }
-                                                        } else {
-                                                            if ((hour >= 7 && hour <= 9) || (hour >= 18 && hour <= 20)) {
-                                                                level = 'very-high';
-                                                                text = '留ㅼ슦?쇱옟';
-                                                            } else if ((hour >= 6 && hour < 7) || (hour > 9 && hour <= 10) ||
-                                                                (hour >= 17 && hour < 18) || (hour > 20 && hour <= 21)) {
-                                                                level = 'high';
-                                                                text = '?쇱옟';
-                                                            } else if (hour >= 10 && hour <= 17) {
-                                                                level = 'medium';
-                                                                text = '蹂댄넻';
-                                                            } else {
-                                                                level = 'low';
-                                                                text = '?ъ쑀';
-                                                            }
-                                                        }
+    if (isWeekend) {
+        if (hour >= 12 && hour <= 18) {
+            level = 'medium';
+            text = '蹂댄넻';
+        } else {
+            level = 'low';
+            text = '?ъ쑀';
+        }
+    } else {
+        if ((hour >= 7 && hour <= 9) || (hour >= 18 && hour <= 20)) {
+            level = 'very-high';
+            text = '留ㅼ슦?쇱옟';
+        } else if ((hour >= 6 && hour < 7) || (hour > 9 && hour <= 10) ||
+            (hour >= 17 && hour < 18) || (hour > 20 && hour <= 21)) {
+            level = 'high';
+            text = '?쇱옟';
+        } else if (hour >= 10 && hour <= 17) {
+            level = 'medium';
+            text = '蹂댄넻';
+        } else {
+            level = 'low';
+            text = '?ъ쑀';
+        }
+    }
 
-                                                        const dot = displayCongestion.querySelector('.congestion-dot');
-                                                        const label = displayCongestion.querySelector('.congestion-label');
+    const dot = displayCongestion.querySelector('.congestion-dot');
+    const label = displayCongestion.querySelector('.congestion-label');
 
-                                                        dot.className = 'congestion-dot ' + level;
-                                                        label.textContent = text;
-                                                    }
+    dot.className = 'congestion-dot ' + level;
+    label.textContent = text;
+}
 
 function toggleFullscreen() {
-                                                        if (!document.fullscreenElement) {
-                                                            displayMode.requestFullscreen().catch(err => {
-                                                                console.log('?꾩껜?붾㈃ ?꾪솚 ?ㅽ뙣:', err);
-                                                            });
-                                                        } else {
-                                                            document.exitFullscreen();
-                                                        }
-                                                    }
+    if (!document.fullscreenElement) {
+        displayMode.requestFullscreen().catch(err => {
+            console.log('?꾩껜?붾㈃ ?꾪솚 ?ㅽ뙣:', err);
+        });
+    } else {
+        document.exitFullscreen();
+    }
+}
 
 // 珥덇린???ㅽ뻾
 init();
 
-                                                    // 호선명 API 매핑 (서울시 실시간 열차 위치 API 기준)
-                                                    function getApiLineName(line) {
-                                                        const map = {
-                                                            '1': '1호선',
-                                                            '2': '2호선',
-                                                            '3': '3호선',
-                                                            '4': '4호선',
-                                                            '5': '5호선',
-                                                            '6': '6호선',
-                                                            '7': '7호선',
-                                                            '8': '8호선',
-                                                            '9': '9호선',
-                                                            '경의중앙': '경의중앙선',
-                                                            '공항철도': '공항철도',
-                                                            '신분당': '신분당선',
-                                                            '수인분당': '수인분당선',
-                                                            '경춘': '경춘선',
-                                                            '우이신설': '우이신설선',
-                                                            '서해': '서해선',
-                                                            '김포골드': '김포골드라인',
-                                                            '에버라인': '에버라인',
-                                                            '의정부': '의정부경전철',
-                                                            'GTX-A': 'GTX-A'
-                                                        };
-                                                        return map[line] || line;
-                                                    }
+// 호선명 API 매핑 (서울시 실시간 열차 위치 API 기준)
+function getApiLineName(line) {
+    const map = {
+        '1': '1호선',
+        '2': '2호선',
+        '3': '3호선',
+        '4': '4호선',
+        '5': '5호선',
+        '6': '6호선',
+        '7': '7호선',
+        '8': '8호선',
+        '9': '9호선',
+        '경의중앙': '경의중앙선',
+        '공항철도': '공항철도',
+        '신분당': '신분당선',
+        '수인분당': '수인분당선',
+        '경춘': '경춘선',
+        '우이신설': '우이신설선',
+        '서해': '서해선',
+        '김포골드': '김포골드라인',
+        '에버라인': '에버라인',
+        '의정부': '의정부경전철',
+        'GTX-A': 'GTX-A'
+    };
+    return map[line] || line;
+}
 
 
 // --- 복구된 함수들 ---
 
 function getLineColor(line) {
-                                                        return LINE_COLORS[line] || '#00A84D';
-                                                    }
+    return LINE_COLORS[line] || '#00A84D';
+}
 
 function getLineName(line) {
-                                                        return LINE_NAMES[line] || line;
-                                                    }
+    return LINE_NAMES[line] || line;
+}
 
 function toggleFavorite() {
-                                                        if (!currentStation) return;
-                                                        const key = `${currentStation.name}_${currentStation.line}`;
-                                                        const exists = favorites.some(f => `${f.name}_${f.line}` === key);
-                                                        if (exists) {
-                                                            removeFavorite(currentStation);
-                                                        } else {
-                                                            favorites.push(currentStation);
-                                                            saveFavorites();
-                                                            updateFavoriteButton();
-                                                            renderFavorites();
-                                                            showToast('즐겨찾기에 추가되었습니다.');
-                                                        }
-                                                    }
+    if (!currentStation) return;
+    const key = `${currentStation.name}_${currentStation.line}`;
+    const exists = favorites.some(f => `${f.name}_${f.line}` === key);
+    if (exists) {
+        removeFavorite(currentStation);
+    } else {
+        favorites.push(currentStation);
+        saveFavorites();
+        updateFavoriteButton();
+        renderFavorites();
+        showToast('즐겨찾기에 추가되었습니다.');
+    }
+}
 
 function updateFavoriteButton() {
-                                                        if (!currentStation) return;
-                                                        const key = `${currentStation.name}_${currentStation.line}`;
-                                                        const exists = favorites.some(f => `${f.name}_${f.line}` === key);
-                                                        if (exists) {
-                                                            favoriteBtn.classList.add('active');
-                                                            favoriteBtn.querySelector('svg').style.fill = 'currentColor';
-                                                        } else {
-                                                            favoriteBtn.classList.remove('active');
-                                                            favoriteBtn.querySelector('svg').style.fill = 'none';
-                                                        }
-                                                    }
+    if (!currentStation) return;
+    const key = `${currentStation.name}_${currentStation.line}`;
+    const exists = favorites.some(f => `${f.name}_${f.line}` === key);
+    if (exists) {
+        favoriteBtn.classList.add('active');
+        favoriteBtn.querySelector('svg').style.fill = 'currentColor';
+    } else {
+        favoriteBtn.classList.remove('active');
+        favoriteBtn.querySelector('svg').style.fill = 'none';
+    }
+}
 
 function renderArrivals(arrivals) {
-                                                        const targetUpdn = [];
-                                                        if (currentDirection === 'up') {
-                                                            targetUpdn.push('상행', '내선');
-                                                        } else {
-                                                            targetUpdn.push('하행', '외선');
-                                                        }
+    const targetUpdn = [];
+    if (currentDirection === 'up') {
+        targetUpdn.push('상행', '내선');
+    } else {
+        targetUpdn.push('하행', '외선');
+    }
 
-                                                        const filtered = arrivals.filter(train => targetUpdn.includes(train.updnLine));
+    const filtered = arrivals.filter(train => targetUpdn.includes(train.updnLine));
 
-                                                        const grouped = {};
-                                                        filtered.forEach(train => {
-                                                            // 행선지 이름 정제
-                                                            let destName = train.bstatnNm;
-                                                            // 문구 정리 (API 메시지 파싱)
-                                                            let message = train.arvlMsg2;
-                                                            let seconds = parseInt(train.barvlDt);
+    const grouped = {};
+    filtered.forEach(train => {
+        // 행선지 이름 정제
+        let destName = train.bstatnNm;
+        // 문구 정리 (API 메시지 파싱)
+        let message = train.arvlMsg2;
+        let seconds = parseInt(train.barvlDt);
 
-                                                            // 도착 메시지 보정
-                                                            if (seconds === 0 && !message.includes('도착')) {
-                                                                // 시간이 0인데 도착 메시지가 아니면 (진입 등), 시간은 0으로 둠
-                                                            }
+        // 도착 메시지 보정
+        if (seconds === 0 && !message.includes('도착')) {
+            // 시간이 0인데 도착 메시지가 아니면 (진입 등), 시간은 0으로 둠
+        }
 
-                                                            if (!grouped[destName]) {
-                                                                grouped[destName] = [];
-                                                            }
-                                                            grouped[destName].push({
-                                                                seconds: seconds,
-                                                                message: message,
-                                                                trainLineNm: train.trainLineNm,
-                                                                status: train.arvlMsg2,
-                                                                currentSeconds: seconds // 초기값
-                                                            });
-                                                        });
+        if (!grouped[destName]) {
+            grouped[destName] = [];
+        }
+        grouped[destName].push({
+            seconds: seconds,
+            message: message,
+            trainLineNm: train.trainLineNm,
+            status: train.arvlMsg2,
+            currentSeconds: seconds // 초기값
+        });
+    });
 
-                                                        arrivalData = Object.keys(grouped).map(dest => ({
-                                                            destination: dest,
-                                                            trains: grouped[dest].sort((a, b) => a.seconds - b.seconds)
-                                                        }));
+    arrivalData = Object.keys(grouped).map(dest => ({
+        destination: dest,
+        trains: grouped[dest].sort((a, b) => a.seconds - b.seconds)
+    }));
 
-                                                        if (arrivalData.length === 0) {
-                                                            showNoData();
-                                                        } else {
-                                                            renderArrivalItems();
-                                                        }
-                                                        startCountdown();
-                                                    }
+    if (arrivalData.length === 0) {
+        showNoData();
+    } else {
+        renderArrivalItems();
+    }
+    startCountdown();
+}
 
 // 기타 누락 함수 더미 복구
 function updateLeaveAlert() { }
 function getTargetTrain() { return null; }
 function loadWalkingTimes() {
-                                                        try {
-                                                            const saved = localStorage.getItem('subwayTimer_walkingTimes');
-                                                            walkingTimes = saved ? JSON.parse(saved) : {};
-                                                        } catch { walkingTimes = {}; }
-                                                    }
+    try {
+        const saved = localStorage.getItem('subwayTimer_walkingTimes');
+        walkingTimes = saved ? JSON.parse(saved) : {};
+    } catch { walkingTimes = {}; }
+}
 function loadStationWalkingTime() {
-                                                        if (!currentStation) return;
-                                                        const key = `${currentStation.name}_${currentStation.line}`;
-                                                        currentWalkingTime = walkingTimes[key] || 0;
-                                                        walkingTimeValue.textContent = currentWalkingTime;
-                                                    }
+    if (!currentStation) return;
+    const key = `${currentStation.name}_${currentStation.line}`;
+    currentWalkingTime = walkingTimes[key] || 0;
+    walkingTimeValue.textContent = currentWalkingTime;
+}
 function adjustWalkingTime(delta) {
-                                                        if (!currentStation) return;
-                                                        currentWalkingTime = Math.max(0, currentWalkingTime + delta);
-                                                        walkingTimeValue.textContent = currentWalkingTime;
+    if (!currentStation) return;
+    currentWalkingTime = Math.max(0, currentWalkingTime + delta);
+    walkingTimeValue.textContent = currentWalkingTime;
 
-                                                        const key = `${currentStation.name}_${currentStation.line}`;
-                                                        if (currentWalkingTime > 0) {
-                                                            walkingTimes[key] = currentWalkingTime;
-                                                        } else {
-                                                            delete walkingTimes[key];
-                                                        }
-                                                        localStorage.setItem('subwayTimer_walkingTimes', JSON.stringify(walkingTimes));
-                                                        updateLeaveAlert();
-                                                    }
+    const key = `${currentStation.name}_${currentStation.line}`;
+    if (currentWalkingTime > 0) {
+        walkingTimes[key] = currentWalkingTime;
+    } else {
+        delete walkingTimes[key];
+    }
+    localStorage.setItem('subwayTimer_walkingTimes', JSON.stringify(walkingTimes));
+    updateLeaveAlert();
+}
 
