@@ -59,8 +59,6 @@ const walkingPlus = document.getElementById('walkingPlus');
 const walkingTimeValue = document.getElementById('walkingTimeValue');
 const leaveAlert = document.getElementById('leaveAlert');
 const leaveAlertText = document.getElementById('leaveAlertText');
-const displayLeaveAlert = document.getElementById('displayLeaveAlert');
-const displayLeaveText = document.getElementById('displayLeaveText');
 const displayWalkingInfo = document.getElementById('displayWalkingInfo');
 const displayWalkingTime = document.getElementById('displayWalkingTime');
 const displayCatchable = document.getElementById('displayCatchable');
@@ -1124,18 +1122,16 @@ function getTargetTrain() {
     return null;
 }
 
-// 출발 알림 업데이트
+// 출발 알림 업데이트 (기본 모드용)
 function updateLeaveAlert() {
     if (!currentStation || arrivalData.length === 0 || currentWalkingTime === 0) {
         leaveAlert.classList.add('hidden');
-        if (displayLeaveAlert) displayLeaveAlert.classList.add('hidden');
         return;
     }
 
     const target = getTargetTrain();
     if (!target) {
         leaveAlert.classList.add('hidden');
-        if (displayLeaveAlert) displayLeaveAlert.classList.add('hidden');
         return;
     }
 
@@ -1154,11 +1150,6 @@ function updateLeaveAlert() {
         leaveAlert.classList.remove('hidden', 'warning');
         leaveAlertText.textContent = '지금 출발하세요!';
 
-        if (displayLeaveAlert) {
-            displayLeaveAlert.classList.remove('hidden', 'warning');
-            displayLeaveText.textContent = '지금 출발!';
-        }
-
         // 알림 발송 (한 번만)
         if (!leaveNotified && notifyEnabled) {
             sendNotification(`${currentStation.name}역으로 지금 출발하세요! ${destination} 열차가 곧 도착합니다.`);
@@ -1172,15 +1163,8 @@ function updateLeaveAlert() {
         leaveAlert.classList.remove('hidden');
         leaveAlert.classList.add('warning');
         leaveAlertText.textContent = `${mins}분 ${secs}초 후 출발`;
-
-        if (displayLeaveAlert) {
-            displayLeaveAlert.classList.remove('hidden');
-            displayLeaveAlert.classList.add('warning');
-            displayLeaveText.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')} 후 출발`;
-        }
     } else {
         leaveAlert.classList.add('hidden');
-        if (displayLeaveAlert) displayLeaveAlert.classList.add('hidden');
     }
 }
 

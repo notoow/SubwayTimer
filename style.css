@@ -1066,7 +1066,7 @@ body {
     display: flex;
     align-items: center;
     gap: 16px;
-    margin-bottom: 40px;
+    margin-bottom: 20px;
 }
 
 .display-line {
@@ -1098,7 +1098,7 @@ body {
 /* 세그먼트 디스플레이 */
 .display-timer {
     text-align: center;
-    margin-bottom: 40px;
+    margin-bottom: 20px;
 }
 
 .segment-display {
@@ -1176,7 +1176,7 @@ body {
 
 /* 다음 열차 정보 */
 .display-next {
-    margin-bottom: 30px;
+    margin-bottom: 16px;
 }
 
 .next-trains {
@@ -1390,7 +1390,7 @@ body {
     background: rgba(255, 255, 255, 0.05);
     border-radius: 30px;
     border: 1px solid #333;
-    margin-top: 20px;
+    margin-top: 16px;
 }
 
 .display-walking-info.hidden {
@@ -1425,55 +1425,11 @@ body {
     background: #f59e0b;
 }
 
-/* 전광판 모드 출발 알림 */
-.display-leave-alert {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 16px 32px;
-    background: rgba(239, 68, 68, 0.9);
-    border-radius: 40px;
-    border: 2px solid #ef4444;
-    animation: display-leave-pulse 1s ease-in-out infinite;
-    margin-top: 16px;
-}
-
-.display-leave-alert.hidden {
-    display: none;
-}
-
-.display-leave-alert.warning {
-    background: rgba(245, 158, 11, 0.9);
-    border-color: #f59e0b;
-    animation: none;
-}
-
-.display-leave-alert .leave-text {
-    font-size: 28px;
-    font-weight: 700;
-    color: #fff;
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-}
-
-@keyframes display-leave-pulse {
-
-    0%,
-    100% {
-        transform: scale(1);
-        box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
-    }
-
-    50% {
-        transform: scale(1.02);
-        box-shadow: 0 0 40px rgba(239, 68, 68, 0.8);
-    }
-}
-
 @media (max-width: 600px) {
     .display-walking-info {
         padding: 10px 20px;
         gap: 12px;
-        margin-top: 16px;
+        margin-top: 12px;
     }
 
     .display-walking-info .walking-value {
@@ -1483,14 +1439,5 @@ body {
     .display-walking-info .catchable-badge {
         font-size: 14px;
         padding: 4px 12px;
-    }
-
-    .display-leave-alert {
-        padding: 12px 24px;
-        margin-top: 12px;
-    }
-
-    .display-leave-alert .leave-text {
-        font-size: 20px;
     }
 }
