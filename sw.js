@@ -1,7 +1,9 @@
 const CACHE_NAME = 'subway-timer-v17';
 
-// 경로 자동 감지 (localhost vs GitHub Pages)
-const BASE_PATH = self.location.hostname === 'localhost' ? '/' : '/SubwayTimer/';
+// 경로 자동 감지 (localhost / Cloudflare Pages / GitHub Pages)
+const isLocalhost = self.location.hostname === 'localhost';
+const isCloudflarePages = self.location.hostname.includes('pages.dev');
+const BASE_PATH = (isLocalhost || isCloudflarePages) ? '/' : '/SubwayTimer/';
 const urlsToCache = [
   BASE_PATH,
   BASE_PATH + 'index.html',
