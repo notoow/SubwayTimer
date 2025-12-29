@@ -585,7 +585,9 @@ function startCountdown() {
         }
 
         if (arrivalData.length === 0) {
-            if (currentStation) {
+            // 최소 30초 간격으로만 API 호출 (과도한 호출 방지)
+            const timeSinceLastFetch = Date.now() - (lastFetchTime || 0);
+            if (currentStation && timeSinceLastFetch >= 30000) {
                 fetchArrivalInfo(currentStation);
             }
             return;
@@ -678,14 +680,14 @@ function renderArrivalItems() {
             group.trains.forEach((train, tIdx) => {
                 const seconds = train.currentSeconds ?? train.seconds;
                 const timeInfo = formatTime(seconds);
-                const timeSlot = arrivalList.querySelector(`[data - time - slot="${gIdx}-${tIdx}"]`);
-                const trainRow = arrivalList.querySelector(`[data - group= "${gIdx}"][data - train="${tIdx}"]`);
+                const timeSlot = arrivalList.querySelector(`[data-time-slot="${gIdx}-${tIdx}"]`);
+                const trainRow = arrivalList.querySelector(`[data-group="${gIdx}"][data-train="${tIdx}"]`);
 
                 if (timeSlot) {
                     timeSlot.innerHTML = timeInfo.html;
                 }
                 if (trainRow) {
-                    trainRow.className = `train - row ${timeInfo.className} `;
+                    trainRow.className = `train-row ${timeInfo.className}`;
                 }
             });
         });
@@ -701,14 +703,14 @@ function renderFlatItems(lineColor) {
 
         let badges = '';
         if (item.trainType === '급행' || item.trainType === 'ITX') {
-            badges += `< span class="train-badge express" > ${item.trainType}</span > `;
+            badges += `<span class="train-badge express">${item.trainType}</span>`;
         }
         if (item.isLast) {
-            badges += `< span class="train-badge last" > 막차</span > `;
+            badges += `<span class="train-badge last">막차</span>`;
         }
 
         return `
-                < div class="arrival-item ${timeInfo.className}" data - index="${index}" style = "--line-color: ${lineColor}" >
+            <div class="arrival-item ${timeInfo.className}" data-index="${index}" style="--line-color: ${lineColor}">
                 <span class="arrival-order" style="background-color: ${lineColor}">${index + 1}</span>
                 <div class="arrival-info">
                     <div class="arrival-destination">${item.destination}${badges}</div>
@@ -717,8 +719,8 @@ function renderFlatItems(lineColor) {
                 <div class="arrival-time" data-time-slot="${index}">
                     ${timeInfo.html}
                 </div>
-            </div >
-                `;
+            </div>
+        `;
     }).join('');
 }
 
@@ -740,7 +742,7 @@ function formatTime(seconds) {
 
     if (seconds < 60) {
         return {
-            html: `< span class="time-value" > ${seconds}</span > <span class="time-unit">초</span>`,
+            html: `<span class="time-value">${seconds}</span><span class="time-unit">초</span>`,
             className: 'imminent'
         };
     }
@@ -750,13 +752,13 @@ function formatTime(seconds) {
 
     if (minutes < 3) {
         return {
-            html: `< span class="time-value" > ${minutes}:${secs.toString().padStart(2, '0')}</span > `,
+            html: `<span class="time-value">${minutes}:${secs.toString().padStart(2, '0')}</span>`,
             className: 'imminent'
         };
     }
 
     return {
-        html: `< span class="time-value" > ${minutes}</span > <span class="time-unit">분</span>`,
+        html: `<span class="time-value">${minutes}</span><span class="time-unit">분</span>`,
         className: ''
     };
 }
@@ -892,37 +894,37 @@ function renderArrivals(arrivals) {
 // 로딩 표시
 function showLoading() {
     arrivalList.innerHTML = `
-                < div class="loading" >
+        <div class="loading">
             <div class="loading-spinner"></div>
             <span>도착 정보를 불러오는 중...</span>
-        </div >
-                `;
+        </div>
+    `;
 }
 
 // 데이터 없음 표시
 function showNoData() {
     arrivalList.innerHTML = `
-                < div class="no-data" >
-                    <p>현재 도착 예정 열차가 없습니다</p>
-        </div >
-                `;
+        <div class="no-data">
+            <p>현재 도착 예정 열차가 없습니다</p>
+        </div>
+    `;
 }
 
 // 에러 표시
 function showError(message) {
     arrivalList.innerHTML = `
-                < div class="error" >
-                    <p>${message}</p>
-        </div >
-                `;
+        <div class="error">
+            <p>${message}</p>
+        </div>
+    `;
 }
 
 // 즐겨찾기 토글
 function toggleFavorite() {
     if (!currentStation) return;
 
-    const key = `${currentStation.name}_${currentStation.line} `;
-    const index = favorites.findIndex(f => `${f.name}_${f.line} ` === key);
+    const key = `${currentStation.name}_${currentStation.line}`;
+    const index = favorites.findIndex(f => `${f.name}_${f.line}` === key);
 
     if (index >= 0) {
         favorites.splice(index, 1);
@@ -944,8 +946,8 @@ function updateFavoriteButton() {
         return;
     }
 
-    const key = `${currentStation.name}_${currentStation.line} `;
-    const isFavorite = favorites.some(f => `${f.name}_${f.line} ` === key);
+    const key = `${currentStation.name}_${currentStation.line}`;
+    const isFavorite = favorites.some(f => `${f.name}_${f.line}` === key);
     favoriteBtn.classList.toggle('active', isFavorite);
 }
 
@@ -957,14 +959,14 @@ function renderFavorites() {
     }
 
     favoritesList.innerHTML = favorites.map(station => `
-                < div class="favorite-chip" data - station="${station.name}" data - line="${station.line}" >
+        <div class="favorite-chip" data-station="${station.name}" data-line="${station.line}">
             <span class="favorite-chip-line" style="background-color: ${getLineColor(station.line)}">
                 ${getLineName(station.line)}
             </span>
             <span class="favorite-chip-name">${station.name}</span>
             <button class="favorite-chip-remove" data-station="${station.name}" data-line="${station.line}">&times;</button>
-        </div >
-                `).join('');
+        </div>
+    `).join('');
 
     favoritesList.querySelectorAll('.favorite-chip').forEach(chip => {
         chip.addEventListener('click', (e) => {
@@ -986,8 +988,8 @@ function renderFavorites() {
 
 // 즐겨찾기 삭제
 function removeFavorite(station) {
-    const key = `${station.name}_${station.line} `;
-    favorites = favorites.filter(f => `${f.name}_${f.line} ` !== key);
+    const key = `${station.name}_${station.line}`;
+    favorites = favorites.filter(f => `${f.name}_${f.line}` !== key);
     saveFavorites();
     updateFavoriteButton();
     renderFavorites();
@@ -1032,7 +1034,7 @@ function saveWalkingTimes() {
 }
 
 function getStationKey(station) {
-    return `${station.name}_${station.line} `;
+    return `${station.name}_${station.line}`;
 }
 
 function adjustWalkingTime(delta) {
