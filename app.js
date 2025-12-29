@@ -3,6 +3,7 @@ let currentStation = null;
 let currentDirection = 'up';
 let favorites = [];
 let apiKey = '585858626a74616e38375961745252'; // Seoul Open Data API Key (실시간 지하철 전용)
+let forceDemoMode = true; // 임시 데모 모드 (API 초과시 true로 설정)
 let refreshInterval = null;
 let countdownInterval = null;
 let arrivalData = [];
@@ -429,7 +430,7 @@ async function fetchFromProxy(url) {
 
 // 도착 정보 가져오기 (도착정보 + 열차위치 API 병렬 호출)
 async function fetchArrivalInfo(station) {
-    if (!apiKey) {
+    if (!apiKey || forceDemoMode) {
         showDemoMode(station);
         return;
     }
