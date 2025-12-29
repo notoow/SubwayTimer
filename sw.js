@@ -1,11 +1,14 @@
 const CACHE_NAME = 'subway-timer-v17';
+
+// 경로 자동 감지 (localhost vs GitHub Pages)
+const BASE_PATH = self.location.hostname === 'localhost' ? '/' : '/SubwayTimer/';
 const urlsToCache = [
-  '/SubwayTimer/',
-  '/SubwayTimer/index.html',
-  '/SubwayTimer/style.css',
-  '/SubwayTimer/app.js?v=17',
-  '/SubwayTimer/stations.js?v=17',
-  '/SubwayTimer/manifest.json'
+  BASE_PATH,
+  BASE_PATH + 'index.html',
+  BASE_PATH + 'style.css',
+  BASE_PATH + 'app.js?v=17',
+  BASE_PATH + 'stations.js?v=17',
+  BASE_PATH + 'manifest.json'
 ];
 
 // 설치
