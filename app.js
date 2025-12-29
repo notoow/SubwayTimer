@@ -1305,25 +1305,40 @@ function updateDisplayWalkingInfo(trainSeconds) {
     displayWalkingTime.textContent = currentWalkingTime + '분';
 
     const walkingSeconds = currentWalkingTime * 60;
-    const bufferSeconds = 60; // 1분 여유
+    const runningSeconds = Math.floor(walkingSeconds * 0.7); // 뛰면 70% 시간
+    const bufferSeconds = 30; // 여유 시간
 
-    if (trainSeconds <= 0) {
-        // 이미 도착한 열차
-        displayCatchable.textContent = '탑승 불가';
-        displayCatchable.className = 'catchable-badge impossible';
-    } else if (trainSeconds <= walkingSeconds) {
-        // 도보 시간보다 적게 남음 - 못 탐
-        displayCatchable.textContent = '탑승 불가';
-        displayCatchable.className = 'catchable-badge impossible';
-    } else if (trainSeconds <= walkingSeconds + bufferSeconds) {
-        // 여유 없이 빠듯함 - 뛰어야 함
-        displayCatchable.textContent = '서둘러!';
-        displayCatchable.className = 'catchable-badge hurry';
-    } else {
-        // 여유 있음
+    // 첫 번째 열차 체크
+    if (trainSeconds > walkingSeconds + bufferSeconds) {
+        // 걸어서 여유있게 탑승 가능
         displayCatchable.textContent = '탑승 가능';
         displayCatchable.className = 'catchable-badge';
+    } else if (trainSeconds > runningSeconds) {
+        // 뛰면 탑승 가능
+        displayCatchable.textContent = '뛰면 가능';
+        displayCatchable.className = 'catchable-badge hurry';
+    } else {
+        // 첫 열차 불가 - 다음 열차 체크
+        const nextTrainSeconds = getNextTrainSeconds();
+        if (nextTrainSeconds && nextTrainSeconds > walkingSeconds + bufferSeconds) {
+            displayCatchable.textContent = '다음 열차 OK';
+            displayCatchable.className = 'catchable-badge next-ok';
+        } else if (nextTrainSeconds && nextTrainSeconds > runningSeconds) {
+            displayCatchable.textContent = '다음 뛰면 OK';
+            displayCatchable.className = 'catchable-badge hurry';
+        } else {
+            // 아무것도 못 탐 - 뱃지 숨김
+            displayCatchable.textContent = '';
+            displayCatchable.className = 'catchable-badge hidden';
+        }
     }
+}
+
+// 다음 열차까지 남은 시간 (초) 반환
+function getNextTrainSeconds() {
+    if (arrivalData.length < 2) return null;
+    const nextTrain = arrivalData[1];
+    return nextTrain.currentSeconds ?? nextTrain.seconds;
 }
 
 function updateDisplayCongestion() {

@@ -1396,12 +1396,16 @@ body {
     color: #fff;
 }
 
-.display-walking-info .catchable-badge.impossible {
-    background: #ef4444;
-}
-
 .display-walking-info .catchable-badge.hurry {
     background: #f59e0b;
+}
+
+.display-walking-info .catchable-badge.next-ok {
+    background: #3b82f6;
+}
+
+.display-walking-info .catchable-badge.hidden {
+    display: none;
 }
 
 @media (max-width: 600px) {
