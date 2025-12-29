@@ -61,6 +61,9 @@ const leaveAlert = document.getElementById('leaveAlert');
 const leaveAlertText = document.getElementById('leaveAlertText');
 const displayLeaveAlert = document.getElementById('displayLeaveAlert');
 const displayLeaveText = document.getElementById('displayLeaveText');
+const displayWalkingInfo = document.getElementById('displayWalkingInfo');
+const displayWalkingTime = document.getElementById('displayWalkingTime');
+const displayCatchable = document.getElementById('displayCatchable');
 
 let isDisplayMode = false;
 let displayInterval = null;
@@ -1298,8 +1301,45 @@ function updateDisplayMode() {
     // 혼잡도 업데이트
     updateDisplayCongestion();
 
+    // 도보 시간 & 탑승 가능 여부 업데이트
+    updateDisplayWalkingInfo(seconds);
+
     // 출발 알림 업데이트
     updateLeaveAlert();
+}
+
+// 전광판 모드 도보 시간 정보 업데이트
+function updateDisplayWalkingInfo(trainSeconds) {
+    if (!displayWalkingInfo) return;
+
+    if (currentWalkingTime === 0) {
+        displayWalkingInfo.classList.add('hidden');
+        return;
+    }
+
+    displayWalkingInfo.classList.remove('hidden');
+    displayWalkingTime.textContent = currentWalkingTime + '분';
+
+    const walkingSeconds = currentWalkingTime * 60;
+    const bufferSeconds = 60; // 1분 여유
+
+    if (trainSeconds <= 0) {
+        // 이미 도착한 열차
+        displayCatchable.textContent = '탑승 불가';
+        displayCatchable.className = 'catchable-badge impossible';
+    } else if (trainSeconds <= walkingSeconds) {
+        // 도보 시간보다 적게 남음 - 못 탐
+        displayCatchable.textContent = '탑승 불가';
+        displayCatchable.className = 'catchable-badge impossible';
+    } else if (trainSeconds <= walkingSeconds + bufferSeconds) {
+        // 여유 없이 빠듯함 - 뛰어야 함
+        displayCatchable.textContent = '서둘러!';
+        displayCatchable.className = 'catchable-badge hurry';
+    } else {
+        // 여유 있음
+        displayCatchable.textContent = '탑승 가능';
+        displayCatchable.className = 'catchable-badge';
+    }
 }
 
 function updateDisplayCongestion() {

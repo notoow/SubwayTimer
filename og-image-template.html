@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            width: 1200px;
+            height: 630px;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+            font-family: 'Noto Sans KR', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        .container {
+            text-align: center;
+            padding: 60px;
+        }
+        .timer {
+            font-family: 'Courier New', monospace;
+            font-size: 120px;
+            font-weight: bold;
+            color: #ff6b35;
+            text-shadow: 0 0 30px rgba(255, 107, 53, 0.5);
+            margin-bottom: 30px;
+            letter-spacing: 10px;
+        }
+        .title {
+            font-size: 56px;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+        .subtitle {
+            font-size: 28px;
+            color: #888;
+            margin-bottom: 30px;
+        }
+        .highlight {
+            background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
+            padding: 16px 40px;
+            border-radius: 12px;
+            font-size: 24px;
+            color: white;
+            font-weight: 600;
+            margin-bottom: 30px;
+            display: inline-block;
+        }
+        .features {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+        }
+        .feature {
+            background: rgba(255,255,255,0.05);
+            padding: 14px 24px;
+            border-radius: 30px;
+            font-size: 18px;
+            color: #aaa;
+            border: 1px solid #333;
+        }
+        .logo {
+            position: absolute;
+            bottom: 40px;
+            right: 50px;
+            font-size: 24px;
+            color: #555;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <div class="timer">02:34</div>
+        <h1 class="title">지하철 타이머</h1>
+        <p class="subtitle">서울 지하철 실시간 도착 정보</p>
+        <div class="highlight">역까지 도보 시간 설정 → 출발 타이밍 알림</div>
+        <div class="features">
+            <span class="feature">초 단위 카운트다운</span>
+            <span class="feature">전광판 모드</span>
+            <span class="feature">즐겨찾기</span>
+        </div>
+    </div>
+    <div class="logo">subwaytimer-731.pages.dev</div>
+</body>
+</html>
