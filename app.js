@@ -5,13 +5,14 @@ let apiKey = '585858626a74616e38375961745252'; // Seoul Open Data API Key (?ㅼ�
 let refreshInterval = null;
 let countdownInterval = null;
 let arrivalData = [];
-let trainPositions = []; // ?ㅼ떆媛??댁감 ?꾩튂 ?곗씠??let lastFetchTime = null;
+let trainPositions = []; // 실시간 열차 위치 데이터
 let notifyEnabled = false;
 let notifyThreshold = 60; // 1遺????뚮┝
-let walkingTimes = {}; // ??퀎 ?꾨낫 ?쒓컙 ???let currentWalkingTime = 0; // ?꾩옱 ?좏깮????쓽 ?꾨낫 ?쒓컙 (遺?
+let walkingTimes = {}; // 역별 도보 시간 저장
+let currentWalkingTime = 0; // 현재 선택된 역의 도보 시간 (분)
 let leaveNotified = false; // 異쒕컻 ?뚮┝ 諛쒖넚 ?щ?
         // 방향 변경 시 행선지 선택 초기화
-        targetDestination = null;
+let targetDestination = null; // 알림 대상 행선지
 
 // Cloudflare Worker URL (API ?꾨줉??
 const WORKER_URL = 'https://subway-timer.antcow0706.workers.dev';
