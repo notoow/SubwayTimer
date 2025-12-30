@@ -95,9 +95,15 @@ export default {
                 if (day === 0) weekTag = '3'; // 일요일/공휴일
                 else if (day === 6) weekTag = '2'; // 토요일
 
-                // 1단계: 역명으로 역코드 조회
-                const searchUrl = `http://swopenapi.seoul.go.kr/api/subway/${arrivalKey}/json/SearchInfoBySubwayNameService/1/5/${encodeURIComponent(stationName)}`;
-                const searchRes = await fetch(searchUrl);
+                // 1단계: 역명으로 역코드 조회 (일반 API는 다른 도메인 사용)
+                const searchUrl = `http://openapi.seoul.go.kr:8088/${arrivalKey}/json/SearchInfoBySubwayNameService/1/5/${encodeURIComponent(stationName)}`;
+                const searchRes = await fetch(searchUrl, { cf: { cacheTtl: 300 } });
+                if (!searchRes.ok) {
+                    return new Response(
+                        JSON.stringify({ error: `역 검색 실패: ${searchRes.status}`, timetable: [] }),
+                        { headers: corsHeaders }
+                    );
+                }
                 const searchData = await searchRes.json();
 
                 if (!searchData.SearchInfoBySubwayNameService?.row?.length) {
@@ -121,9 +127,15 @@ export default {
 
                 const stationCode = stationInfo.FR_CODE;
 
-                // 2단계: 역코드로 시간표 조회
-                const timetableUrl = `http://swopenapi.seoul.go.kr/api/subway/${arrivalKey}/json/SearchSTNTimeTableByFRCodeService/1/100/${stationCode}/${weekTag}/${updown}`;
-                const ttRes = await fetch(timetableUrl);
+                // 2단계: 역코드로 시간표 조회 (일반 API 도메인)
+                const timetableUrl = `http://openapi.seoul.go.kr:8088/${arrivalKey}/json/SearchSTNTimeTableByFRCodeService/1/100/${stationCode}/${weekTag}/${updown}`;
+                const ttRes = await fetch(timetableUrl, { cf: { cacheTtl: 300 } });
+                if (!ttRes.ok) {
+                    return new Response(
+                        JSON.stringify({ error: `시간표 조회 실패: ${ttRes.status}`, timetable: [] }),
+                        { headers: corsHeaders }
+                    );
+                }
                 const ttData = await ttRes.json();
 
                 if (!ttData.SearchSTNTimeTableByFRCodeService?.row?.length) {
