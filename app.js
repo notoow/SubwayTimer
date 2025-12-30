@@ -1249,24 +1249,30 @@ function updateDisplayMode() {
         nextTrains = arrivalData.slice(1, 3);
     }
 
-    if (nextTrains[0]) {
-        const sec1 = nextTrains[0].currentSeconds ?? nextTrains[0].seconds;
-        const m1 = Math.floor(sec1 / 60);
-        const s1 = sec1 % 60;
-        nextTrain1.querySelector('.next-time').textContent =
-            sec1 <= 0 ? '도착' : `${m1.toString().padStart(2, '0')}:${s1.toString().padStart(2, '0')} `;
-    } else {
-        nextTrain1.querySelector('.next-time').textContent = '--:--';
+    // 다음 열차 시간 업데이트 (null 체크 추가)
+    const nextTime1 = nextTrain1?.querySelector('.next-time');
+    const nextTime2 = nextTrain2?.querySelector('.next-time');
+
+    if (nextTime1) {
+        if (nextTrains[0]) {
+            const sec1 = nextTrains[0].currentSeconds ?? nextTrains[0].seconds;
+            const m1 = Math.floor(Math.max(0, sec1) / 60);
+            const s1 = Math.max(0, sec1) % 60;
+            nextTime1.textContent = sec1 <= 0 ? '도착' : `${m1.toString().padStart(2, '0')}:${s1.toString().padStart(2, '0')}`;
+        } else {
+            nextTime1.textContent = '--:--';
+        }
     }
 
-    if (nextTrains[1]) {
-        const sec2 = nextTrains[1].currentSeconds ?? nextTrains[1].seconds;
-        const m2 = Math.floor(sec2 / 60);
-        const s2 = sec2 % 60;
-        nextTrain2.querySelector('.next-time').textContent =
-            sec2 <= 0 ? '도착' : `${m2.toString().padStart(2, '0')}:${s2.toString().padStart(2, '0')} `;
-    } else {
-        nextTrain2.querySelector('.next-time').textContent = '--:--';
+    if (nextTime2) {
+        if (nextTrains[1]) {
+            const sec2 = nextTrains[1].currentSeconds ?? nextTrains[1].seconds;
+            const m2 = Math.floor(Math.max(0, sec2) / 60);
+            const s2 = Math.max(0, sec2) % 60;
+            nextTime2.textContent = sec2 <= 0 ? '도착' : `${m2.toString().padStart(2, '0')}:${s2.toString().padStart(2, '0')}`;
+        } else {
+            nextTime2.textContent = '--:--';
+        }
     }
 
     // 혼잡도 업데이트
