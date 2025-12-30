@@ -186,7 +186,7 @@ export default {
                 apiUrl = `http://swopenapi.seoul.go.kr/api/subway/${positionKey}/json/realtimePosition/0/100/${encodeURIComponent(lineName)}`;
             } else if (station) {
                 const decodedStation = decodeURIComponent(station);
-                apiUrl = `http://swopenapi.seoul.go.kr/api/subway/${arrivalKey}/json/realtimeStationArrival/0/20/${encodeURIComponent(decodedStation)}`;
+                apiUrl = `http://swopenapi.seoul.go.kr/api/subway/${arrivalKey}/json/realtimeStationArrival/0/50/${encodeURIComponent(decodedStation)}`;
             } else {
                 return new Response(
                     JSON.stringify({ error: 'station 또는 line 파라미터가 필요합니다' }),

@@ -517,7 +517,7 @@ async function fetchArrivalInfo(station) {
 
         lastFetchTime = Date.now();
         updateLastUpdateTime();
-        renderArrivals(arrivals);
+        await renderArrivals(arrivals);
         startCountdown();
 
     } catch (error) {
@@ -908,7 +908,7 @@ const lineToSubwayId = {
 };
 
 // 도착 정보 렌더링 (API 응답 처리)
-function renderArrivals(arrivals) {
+async function renderArrivals(arrivals) {
     // 선택한 호선의 subwayId
     const targetSubwayId = currentStation ? lineToSubwayId[currentStation.line] : null;
 
@@ -1006,6 +1006,12 @@ function renderArrivals(arrivals) {
         }
     });
 
+    // 행선지당 최소 2개 보장 - 부족하면 시간표로 보충 (1~8호선만)
+    const lineNum = currentStation?.line;
+    if (isCrawlSupported(lineNum)) {
+        await fillMissingTrainsFromTimetable(grouped, currentStation);
+    }
+
     // 시간순 정렬된 그룹 배열로 변환
     arrivalData = Object.entries(grouped)
         .map(([dest, trains]) => ({
@@ -1015,6 +1021,66 @@ function renderArrivals(arrivals) {
         .sort((a, b) => a.trains[0].seconds - b.trains[0].seconds); // 첫 열차 도착순
 
     renderArrivalItems();
+}
+
+// 부족한 열차를 시간표로 보충
+async function fillMissingTrainsFromTimetable(grouped, station) {
+    const MIN_TRAINS_PER_DEST = 2;
+
+    // 부족한 행선지 확인
+    const needsFill = Object.entries(grouped).some(([_, trains]) => trains.length < MIN_TRAINS_PER_DEST);
+    if (!needsFill && Object.keys(grouped).length > 0) return;
+
+    try {
+        const updown = currentDirection === 'up' ? '1' : '2';
+        const ttResponse = await fetchFromProxy(
+            `${workerUrl}?type=timetable&station=${encodeURIComponent(station.name)}&line=${station.line}&updown=${updown}`
+        );
+
+        if (!ttResponse.timetable || ttResponse.timetable.length === 0) return;
+
+        const now = new Date();
+        const koreaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+        const currentMinutes = koreaTime.getHours() * 60 + koreaTime.getMinutes();
+
+        ttResponse.timetable.forEach(t => {
+            const destKey = t.destination?.replace(/행$/, '') || '';
+            if (!destKey) return;
+
+            // 해당 행선지 그룹이 없거나 열차 수가 부족하면 추가
+            if (!grouped[destKey]) {
+                grouped[destKey] = [];
+            }
+
+            if (grouped[destKey].length < MIN_TRAINS_PER_DEST) {
+                const [h, m] = (t.arriveTime || '').split(':').map(Number);
+                if (isNaN(h) || isNaN(m)) return;
+
+                const arriveMinutes = h * 60 + m;
+                const diffSeconds = Math.max(0, (arriveMinutes - currentMinutes) * 60);
+
+                // 이미 있는 열차와 중복 체크 (비슷한 시간대)
+                const isDuplicate = grouped[destKey].some(
+                    train => Math.abs(train.seconds - diffSeconds) < 60
+                );
+
+                if (!isDuplicate && diffSeconds > 0) {
+                    grouped[destKey].push({
+                        seconds: diffSeconds,
+                        destination: destKey + '행',
+                        destinationKey: destKey,
+                        status: `${t.arriveTime.substring(0, 5)} 도착 예정`,
+                        trainType: t.isExpress ? '급행' : '일반',
+                        isLast: false,
+                        trainLineNm: '',
+                        _fromTimetable: true
+                    });
+                }
+            }
+        });
+    } catch (error) {
+        console.warn('시간표 보충 실패:', error);
+    }
 }
 
 // 로딩 표시
