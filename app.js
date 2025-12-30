@@ -8,6 +8,7 @@ let refreshInterval = null;
 let countdownInterval = null;
 let arrivalData = [];
 let trainPositions = []; // 실시간 열차 위치 데이터
+let crawlTrainData = []; // 서울교통공사 크롤링 데이터 (1~8호선)
 let lastFetchTime = null;
 let notifyEnabled = false;
 let notifyThreshold = 60; // 1분 전 알림
@@ -432,7 +433,13 @@ async function fetchFromProxy(url) {
     return JSON.parse(text);
 }
 
-// 도착 정보 가져오기 (도착정보 + 열차위치 API 병렬 호출)
+// 1~8호선 여부 확인 (서울교통공사 크롤링 지원 범위)
+function isCrawlSupported(line) {
+    const lineNum = parseInt(line);
+    return !isNaN(lineNum) && lineNum >= 1 && lineNum <= 8;
+}
+
+// 도착 정보 가져오기 (도착정보 + 열차위치 API + 크롤링 병렬 호출)
 async function fetchArrivalInfo(station) {
     if (!apiKey || forceDemoMode) {
         showDemoMode(station);
@@ -446,14 +453,23 @@ async function fetchArrivalInfo(station) {
     try {
         const stationName = encodeURIComponent(station.name);
         const lineName = encodeURIComponent(station.line + '호선');
+        const lineNum = station.line;
 
-        // 병렬로 두 API 호출
-        const [arrivalResult, positionResult] = await Promise.allSettled([
+        // API 호출 목록 구성
+        const apiCalls = [
             // 1. 실시간 도착정보
             fetchFromProxy(`${workerUrl}?station=${stationName}`),
             // 2. 실시간 열차 위치
             fetchFromProxy(`${workerUrl}?type=position&line=${lineName}`)
-        ]);
+        ];
+
+        // 1~8호선이면 크롤링도 추가
+        if (isCrawlSupported(lineNum)) {
+            apiCalls.push(fetchFromProxy(`${workerUrl}?type=crawl&line=${lineNum}`));
+        }
+
+        const results = await Promise.allSettled(apiCalls);
+        const [arrivalResult, positionResult, crawlResult] = results;
 
         // 도착정보 처리
         let arrivals = [];
@@ -472,6 +488,17 @@ async function fetchArrivalInfo(station) {
             }
         }
 
+        // 크롤링 데이터 처리 (1~8호선)
+        crawlTrainData = [];
+        if (crawlResult && crawlResult.status === 'fulfilled') {
+            const crawlData = crawlResult.value;
+            if (crawlData.trains && Array.isArray(crawlData.trains)) {
+                crawlTrainData = crawlData.trains;
+                // 크롤링 데이터로 도착정보 보정
+                arrivals = mergeWithCrawlData(arrivals, crawlTrainData, station);
+            }
+        }
+
         if (arrivals.length === 0) {
             showNoData();
             return;
@@ -486,6 +513,59 @@ async function fetchArrivalInfo(station) {
         console.error('API 호출 실패:', error);
         showDemoMode(station);
     }
+}
+
+// 크롤링 데이터로 도착정보 보정
+function mergeWithCrawlData(arrivals, crawlTrains, station) {
+    if (!crawlTrains || crawlTrains.length === 0) return arrivals;
+
+    // 현재 역으로 오는 열차만 필터링
+    const stationName = station.name;
+    const relevantCrawl = crawlTrains.filter(train => {
+        // 현재 역 또는 인근 역에 있는 열차
+        return train.statnNm === stationName ||
+            train.status === '접근' ||
+            train.status === '도착' ||
+            train.status === '진입';
+    });
+
+    // 열차번호로 매칭하여 데이터 보정
+    arrivals.forEach(arrival => {
+        const trainNo = arrival.btrainNo;
+        if (!trainNo) return;
+
+        const matchingCrawl = crawlTrains.find(c => c.trainNo === trainNo);
+        if (matchingCrawl) {
+            // 크롤링 데이터가 더 최신이면 상태 업데이트
+            if (!arrival.arvlMsg2 || arrival.arvlMsg2 === '') {
+                arrival.arvlMsg2 = `${matchingCrawl.statnNm} ${matchingCrawl.status}`;
+            }
+            // 행선지 정보 보정 (API에서 누락된 경우)
+            if (!arrival.bstatnNm || arrival.bstatnNm === '' || arrival.bstatnNm === 'null') {
+                arrival.bstatnNm = matchingCrawl.destination;
+            }
+        }
+    });
+
+    // API에 없는 열차 추가 (크롤링에만 있는 경우)
+    relevantCrawl.forEach(crawl => {
+        const exists = arrivals.some(a => a.btrainNo === crawl.trainNo);
+        if (!exists && crawl.statnNm === stationName) {
+            // 크롤링 데이터로 새 도착 정보 생성
+            arrivals.push({
+                btrainNo: crawl.trainNo,
+                bstatnNm: crawl.destination,
+                arvlMsg2: `${crawl.statnNm} ${crawl.status}`,
+                barvlDt: crawl.status === '도착' ? '0' : '60',
+                updnLine: crawl.updnLine === '상행' ? '상행' : '하행',
+                subwayId: `100${station.line}`,
+                statnNm: stationName,
+                _fromCrawl: true
+            });
+        }
+    });
+
+    return arrivals;
 }
 
 // 호선별 행선지 데이터
