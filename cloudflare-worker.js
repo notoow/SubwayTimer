@@ -4,6 +4,7 @@
  * - realtimeStationArrival: 역별 실시간 도착정보
  * - realtimePosition: 호선별 실시간 열차 위치
  * - crawl: 서울교통공사 크롤링 (더 정확한 실시간 위치)
+ * - timetable: 역별 열차 시간표 (폴백용)
  */
 
 export default {
@@ -26,7 +27,7 @@ export default {
         const station = url.searchParams.get('station');
         const line = url.searchParams.get('line');
 
-        // API 키 (각 API별로 다른 키 사용)
+        // API 키
         const arrivalKey = env.SEOUL_API_KEY || '46774f6a4d74616e38394361555279';
         const positionKey = env.SEOUL_POSITION_KEY || '585858626a74616e38375961745252';
 
@@ -63,7 +64,7 @@ export default {
                         statnNm: match[2],
                         status: match[3],
                         destination: match[4],
-                        updnLine: match[1].slice(-1) % 2 === 0 ? '상행' : '하행', // 짝수=상행, 홀수=하행 (일반적 규칙)
+                        updnLine: match[1].slice(-1) % 2 === 0 ? '상행' : '하행',
                         timestamp: Date.now()
                     });
                 }
@@ -80,14 +81,98 @@ export default {
                 );
             }
 
+            // 열차 시간표 API (1~8호선만)
+            if (type === 'timetable' && station && line) {
+                const stationName = decodeURIComponent(station);
+                const lineNum = line.replace(/[^0-9]/g, '');
+                const updown = url.searchParams.get('updown') || '1'; // 1=상행/외선, 2=하행/내선
+
+                // 요일 판단 (한국 시간 기준)
+                const now = new Date();
+                const koreaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+                const day = koreaTime.getDay();
+                let weekTag = '1'; // 평일
+                if (day === 0) weekTag = '3'; // 일요일/공휴일
+                else if (day === 6) weekTag = '2'; // 토요일
+
+                // 1단계: 역명으로 역코드 조회
+                const searchUrl = `http://swopenapi.seoul.go.kr/api/subway/${arrivalKey}/json/SearchInfoBySubwayNameService/1/5/${encodeURIComponent(stationName)}`;
+                const searchRes = await fetch(searchUrl);
+                const searchData = await searchRes.json();
+
+                if (!searchData.SearchInfoBySubwayNameService?.row?.length) {
+                    return new Response(
+                        JSON.stringify({ error: '역을 찾을 수 없습니다', timetable: [] }),
+                        { headers: corsHeaders }
+                    );
+                }
+
+                // 해당 호선의 역코드 찾기
+                const stationInfo = searchData.SearchInfoBySubwayNameService.row.find(
+                    r => r.LINE_NUM === `0${lineNum}호선` || r.LINE_NUM === `${lineNum}호선`
+                );
+
+                if (!stationInfo) {
+                    return new Response(
+                        JSON.stringify({ error: '해당 호선의 역을 찾을 수 없습니다', timetable: [] }),
+                        { headers: corsHeaders }
+                    );
+                }
+
+                const stationCode = stationInfo.FR_CODE;
+
+                // 2단계: 역코드로 시간표 조회
+                const timetableUrl = `http://swopenapi.seoul.go.kr/api/subway/${arrivalKey}/json/SearchSTNTimeTableByFRCodeService/1/100/${stationCode}/${weekTag}/${updown}`;
+                const ttRes = await fetch(timetableUrl);
+                const ttData = await ttRes.json();
+
+                if (!ttData.SearchSTNTimeTableByFRCodeService?.row?.length) {
+                    return new Response(
+                        JSON.stringify({ error: '시간표를 찾을 수 없습니다', timetable: [] }),
+                        { headers: corsHeaders }
+                    );
+                }
+
+                // 현재 시간 이후의 열차만 필터링
+                const currentTime = koreaTime.getHours() * 100 + koreaTime.getMinutes();
+                const timetable = ttData.SearchSTNTimeTableByFRCodeService.row
+                    .map(t => {
+                        const timeStr = t.ARRIVETIME || t.LEFTTIME || '';
+                        const [h, m, s] = timeStr.split(':').map(Number);
+                        const timeNum = h * 100 + m;
+                        return {
+                            trainNo: t.TRAIN_NO,
+                            destination: t.SUBWAYENAME || t.SUBWAYSNAME,
+                            arriveTime: timeStr,
+                            timeNum,
+                            isExpress: t.EXPRESS_YN === 'G',
+                            direction: updown === '1' ? '상행' : '하행'
+                        };
+                    })
+                    .filter(t => t.timeNum >= currentTime)
+                    .slice(0, 10); // 최대 10개
+
+                return new Response(
+                    JSON.stringify({
+                        source: 'timetable',
+                        station: stationName,
+                        line: lineNum,
+                        stationCode,
+                        weekday: weekTag === '1' ? '평일' : weekTag === '2' ? '토요일' : '휴일',
+                        direction: updown === '1' ? '상행/외선' : '하행/내선',
+                        timetable,
+                        timestamp: new Date().toISOString()
+                    }),
+                    { headers: corsHeaders }
+                );
+            }
+
             let apiUrl;
 
             if (type === 'position' && line) {
-                // 실시간 열차 위치 API (호선별) - 전용 키 사용
                 const lineName = decodeURIComponent(line);
                 apiUrl = `http://swopenapi.seoul.go.kr/api/subway/${positionKey}/json/realtimePosition/0/100/${encodeURIComponent(lineName)}`;
             } else if (station) {
-                // 실시간 도착정보 API (역별)
                 const decodedStation = decodeURIComponent(station);
                 apiUrl = `http://swopenapi.seoul.go.kr/api/subway/${arrivalKey}/json/realtimeStationArrival/0/20/${encodeURIComponent(decodedStation)}`;
             } else {
@@ -97,7 +182,6 @@ export default {
                 );
             }
 
-            // 캐시 방지를 위해 타임스탬프 추가
             const separator = apiUrl.includes('?') ? '&' : '?';
             const noCacheUrl = `${apiUrl}${separator}_t=${Date.now()}`;
 

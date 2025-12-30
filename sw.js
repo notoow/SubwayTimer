@@ -1,4 +1,4 @@
-const CACHE_NAME = 'subway-timer-v28';
+const CACHE_NAME = 'subway-timer-v29';
 
 // 경로 자동 감지 (localhost / Cloudflare Pages / GitHub Pages)
 const isLocalhost = self.location.hostname === 'localhost';
@@ -8,8 +8,8 @@ const urlsToCache = [
   BASE_PATH,
   BASE_PATH + 'index.html',
   BASE_PATH + 'style.css',
-  BASE_PATH + 'app.js?v=28',
-  BASE_PATH + 'stations.js?v=28',
+  BASE_PATH + 'app.js?v=29',
+  BASE_PATH + 'stations.js?v=29',
   BASE_PATH + 'manifest.json'
 ];
 

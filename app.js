@@ -500,8 +500,19 @@ async function fetchArrivalInfo(station) {
         }
 
         if (arrivals.length === 0) {
-            showNoData();
-            return;
+            // 실시간 데이터 없으면 시간표로 폴백 (1~8호선만)
+            if (isCrawlSupported(lineNum)) {
+                const timetableArrivals = await fetchTimetableFallback(station);
+                if (timetableArrivals.length > 0) {
+                    arrivals = timetableArrivals;
+                } else {
+                    showNoData();
+                    return;
+                }
+            } else {
+                showNoData();
+                return;
+            }
         }
 
         lastFetchTime = Date.now();
@@ -512,6 +523,49 @@ async function fetchArrivalInfo(station) {
     } catch (error) {
         console.error('API 호출 실패:', error);
         showDemoMode(station);
+    }
+}
+
+// 시간표 폴백 (실시간 데이터 없을 때)
+async function fetchTimetableFallback(station) {
+    try {
+        const stationName = encodeURIComponent(station.name);
+        const lineNum = station.line;
+        const updown = currentDirection === 'up' ? '1' : '2';
+
+        const ttResponse = await fetchFromProxy(
+            `${workerUrl}?type=timetable&station=${stationName}&line=${lineNum}&updown=${updown}`
+        );
+
+        if (!ttResponse.timetable || ttResponse.timetable.length === 0) {
+            return [];
+        }
+
+        // 시간표 데이터를 도착 정보 형식으로 변환
+        const now = new Date();
+        const koreaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+        const currentMinutes = koreaTime.getHours() * 60 + koreaTime.getMinutes();
+
+        return ttResponse.timetable.map(t => {
+            const [h, m] = t.arriveTime.split(':').map(Number);
+            const arriveMinutes = h * 60 + m;
+            const diffSeconds = Math.max(0, (arriveMinutes - currentMinutes) * 60);
+
+            return {
+                btrainNo: t.trainNo,
+                bstatnNm: t.destination,
+                arvlMsg2: `${t.arriveTime} 도착 예정`,
+                barvlDt: String(diffSeconds),
+                updnLine: t.direction === '상행' ? '상행' : '하행',
+                subwayId: `100${lineNum}`,
+                statnNm: station.name,
+                _fromTimetable: true
+            };
+        }).slice(0, 5);
+
+    } catch (error) {
+        console.warn('시간표 조회 실패:', error);
+        return [];
     }
 }
 
