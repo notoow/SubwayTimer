@@ -819,7 +819,6 @@ function renderArrivals(arrivals) {
         if (arrival.recptnDt && seconds > 0) {
             try {
                 // 서울시 API는 "YYYY-MM-DD HH:mm:ss" 형식의 KST 반환
-                // 명시적으로 한국 시간대로 파싱
                 let recptnStr = arrival.recptnDt;
                 // 공백을 T로 변환하고 한국 시간대 추가
                 if (recptnStr.includes(' ') && !recptnStr.includes('T')) {
@@ -828,9 +827,13 @@ function renderArrivals(arrivals) {
                 const recptnTime = new Date(recptnStr).getTime();
                 const timeDiff = Math.floor((now - recptnTime) / 1000);
 
-                // 유효한 범위 내에서만 보정 (0~300초, 5분 이내)
-                if (timeDiff > 0 && timeDiff < 300) {
+                // 유효한 범위 내에서만 보정 (0~120초, 2분 이내)
+                // 너무 오래된 데이터는 API 캐시 문제일 수 있으므로 보정하지 않음
+                if (timeDiff >= 0 && timeDiff <= 120) {
                     seconds = Math.max(0, seconds - timeDiff);
+                } else if (timeDiff > 120) {
+                    // 2분 이상 지연된 데이터는 신뢰도 낮음 - 원본 유지하되 경고
+                    console.warn('API 데이터 지연:', timeDiff + '초', arrival.recptnDt);
                 }
             } catch (e) {
                 console.warn('recptnDt 파싱 실패:', arrival.recptnDt);

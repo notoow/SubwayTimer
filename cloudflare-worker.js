@@ -11,7 +11,9 @@ export default {
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'GET, OPTIONS',
             'Access-Control-Allow-Headers': 'Content-Type',
-            'Content-Type': 'application/json; charset=utf-8'
+            'Content-Type': 'application/json; charset=utf-8',
+            'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma': 'no-cache'
         };
 
         if (request.method === 'OPTIONS') {
@@ -45,8 +47,13 @@ export default {
                 );
             }
 
-            const response = await fetch(apiUrl, {
-                headers: { 'Accept': 'application/json' }
+            // 캐시 방지를 위해 타임스탬프 추가
+            const separator = apiUrl.includes('?') ? '&' : '?';
+            const noCacheUrl = `${apiUrl}${separator}_t=${Date.now()}`;
+
+            const response = await fetch(noCacheUrl, {
+                headers: { 'Accept': 'application/json' },
+                cf: { cacheTtl: 0, cacheEverything: false }
             });
 
             const text = await response.text();
