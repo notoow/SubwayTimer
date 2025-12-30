@@ -295,10 +295,13 @@ function showToast(message) {
     setTimeout(() => toast.classList.remove('show'), 2500);
 }
 
-// 혼잡도 계산 (시간대 기반 통계)
+// 혼잡도 계산 (시간대 기반 통계) - 한국 시간 기준
 function updateCongestion() {
-    const hour = new Date().getHours();
-    const day = new Date().getDay();
+    // 한국 시간으로 변환
+    const now = new Date();
+    const koreaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+    const hour = koreaTime.getHours();
+    const day = koreaTime.getDay();
     const isWeekend = day === 0 || day === 6;
 
     let level, text;
@@ -1337,8 +1340,11 @@ function getNextTrainSeconds() {
 function updateDisplayCongestion() {
     if (!displayCongestionDot) return;
 
-    const hour = new Date().getHours();
-    const day = new Date().getDay();
+    // 한국 시간으로 변환
+    const now = new Date();
+    const koreaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+    const hour = koreaTime.getHours();
+    const day = koreaTime.getDay();
     const isWeekend = day === 0 || day === 6;
 
     let level;
